@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerManager Pro - Gestión de Baterías 4.4</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Estilos Personalizados -->
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in-right { animation: slideInRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .hidden { display: none !important; }
+        .table-header { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+        .table-cell { padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #374151; }
+        .login-bg {
+            background-image: linear-gradient(rgba(30, 58, 138, 0.9), rgba(30, 58, 138, 0.8)), url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover; background-position: center;
+        }
+        /* Estilos para impresión de QR */
+        @media print {
+            body * { visibility: hidden; }
+            #qr-print-area, #qr-print-area * { visibility: visible; }
+            #qr-print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        }
+
+        /* --- ESTILOS DE BADGES --- */
+        .badge-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; } /* En Uso */
+        .badge-rojo { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Falla / Mantenimiento */
+        .badge-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; } /* Cargando / Operativo */
+        .badge-amarillo { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Reposo / Alerta */
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Notificaciones Flotantes -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 flex flex-col gap-3 w-96 pointer-events-none"></div>
+
+    <!-- PANTALLA DE LOGIN / REGISTRO -->
+    <div id="auth-container" class="flex-grow flex items-center justify-center login-bg p-4 overflow-y-auto w-full z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden fade-in my-8">
+            <div class="bg-indigo-600 p-8 text-center">
+                <div class="bg-white/20 p-3 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 backdrop-blur-sm">
+                    <i data-lucide="battery-charging" class="w-10 h-10 text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">PowerManager Pro</h1>
+                <p class="text-indigo-200 text-sm mt-1">Gestión de Energía e Infraestructura</p>
+                <div id="demo-badge" class="hidden mt-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded inline-block">MODO DEMO</div>
+            </div>
+            
+            <!-- Login -->
+            <div id="login-view" class="p-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">Iniciar Sesión</h2>
+                <form id="login-form" class="space-y-5">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Correo</label><input type="email" id="login-email" required class="w-full rounded-lg border px-3 py-2"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label><input type="password" id="login-password" required class="w-full rounded-lg border px-3 py-2"></div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg">Ingresar</button>
+                </form>
+                <div id="local-reset-btn" class="hidden mt-4 pt-4 border-t border-gray-100">
+                    <button onclick="window.clearAllData()" class="w-full text-red-500 text-xs font-bold hover:text-red-700 flex items-center justify-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Restablecer Datos Locales</button>
+                </div>
+                <div class="mt-4 text-center text-sm"><span class="text-gray-500">¿No tienes cuenta?</span> <button onclick="toggleAuthView('register')" class="text-indigo-600 font-bold hover:underline">Crear Usuario</button></div>
+            </div>
+
+            <!-- Registro (Público) -->
+            <div id="register-view" class="p-8 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">Nuevo Usuario</h2>
+                <form id="register-form" class="space-y-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input type="text" id="reg-name" required class="w-full rounded-lg border px-3 py-2"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Correo</label><input type="email" id="reg-email" required class="w-full rounded-lg border px-3 py-2"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label><input type="password" id="reg-password" required minlength="6" class="w-full rounded-lg border px-3 py-2"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rol Inicial</label>
+                        <select id="reg-role" class="w-full rounded-lg border px-3 py-2 bg-white">
+                            <option value="Operario">Operario</option>
+                            <option value="Supervisor">Supervisor</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">El rol Administrador se asigna en la base de datos.</p>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 shadow-lg">Registrarse</button>
+                </form>
+                <div class="mt-6 text-center text-sm"><button onclick="toggleAuthView('login')" class="text-gray-500 hover:text-gray-800">Volver</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL -->
+    <div id="app-layout" class="hidden min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-600 p-2 rounded-lg"><i data-lucide="battery-charging" class="w-6 h-6 text-white"></i></div>
+                        <span class="font-bold text-xl tracking-tight text-gray-900 hidden md:block">PowerManager Pro</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div id="alarm-indicator" class="hidden flex items-center bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 animate-pulse cursor-pointer" onclick="window.switchView('mantencion'); window.switchMaintenanceView('cargadores');">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i> <span id="alarm-count">0</span> Alertas
+                        </div>
+                        <!-- DATOS DE USUARIO CORREGIDOS -->
+                        <div class="text-right mr-2 cursor-pointer hover:opacity-80" onclick="window.openProfileModal()">
+                            <p class="font-bold text-gray-900 text-sm flex items-center justify-end gap-2"><span id="user-display-name">Usuario</span> <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400"></i></p>
+                            <div class="flex items-center justify-end gap-1 text-xs mt-0.5">
+                                <span class="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                                    <span id="user-display-role">...</span>
+                                    <span id="user-display-shift" class="ml-1 text-gray-500 font-normal">Turno...</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="h-8 w-px bg-gray-200 mx-1"></div>
+                        <button onclick="logout()" class="text-gray-500 hover:text-red-600 transition p-2" title="Cerrar Sesión"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <div class="flex-grow bg-gray-50 overflow-y-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Navegación de Pestañas -->
+                <div class="flex gap-2 mb-8 overflow-x-auto pb-2" id="tabs-container">
+                    <button onclick="switchView('dashboard')" class="tab-btn bg-indigo-600 text-white flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium shadow-md" id="tab-dashboard"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard</button>
+                    <button onclick="switchView('inventario')" class="tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium" id="tab-inventario"><i data-lucide="database" class="w-4 h-4"></i> Inventario</button>
+                    <button onclick="switchView('bitacora')" class="tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium" id="tab-bitacora"><i data-lucide="notebook-pen" class="w-4 h-4"></i> Bitácora</button>
+                    <button onclick="switchView('mantencion')" class="tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium" id="tab-mantencion"><i data-lucide="wrench" class="w-4 h-4"></i> Mantención</button>
+                    <button onclick="switchView('historial')" id="nav-history" class="hidden tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium"><i data-lucide="clipboard-list" class="w-4 h-4"></i> Historial Global</button>
+                    <button onclick="switchView('usuarios')" id="nav-users" class="hidden tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium"><i data-lucide="users" class="w-4 h-4"></i> Usuarios</button>
+                </div>
+                
+                <!-- Área de Contenido Dinámico -->
+                <div id="app-content" class="fade-in"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALES ================= -->
+    <div id="modal-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-bold text-gray-800" id="modal-title">Registrar</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <!-- Formulario Baterías -->
+            <form id="battery-form" class="p-6 space-y-6 hidden">
+                <input type="hidden" id="form-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Fecha -->
+                    <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-bold text-blue-800 flex items-center gap-2"><i data-lucide="calendar-days" class="w-4 h-4"></i> Fecha de Registro</label>
+                            <button type="button" onclick="setNow()" class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded hover:bg-blue-300 transition">Hoy</button>
+                        </div>
+                        <div class="flex gap-3">
+                            <div class="flex-grow"><input type="date" id="form-fecha" class="w-full rounded-lg border border-blue-300 px-3 py-2 bg-white text-gray-700 font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                            <div class="w-32"><input type="time" id="form-hora" class="w-full rounded-lg border border-blue-300 px-3 py-2 bg-white text-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Campos Admin -->
+                    <div id="admin-only-fields" class="hidden md:col-span-2 bg-gray-100 p-4 rounded-lg border border-gray-200 shadow-inner">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1 mb-3"><i data-lucide="lock" class="w-3 h-3"></i> Ficha Técnica (Admin)</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-xs font-medium text-gray-600">Serial Fábrica</label><input type="text" id="form-fabricanteSerial" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Marca</label><input type="text" id="form-marca" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Modelo</label><input type="text" id="form-modelo" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Año Fab.</label><input type="number" id="form-anio" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- Campos Base -->
+                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Código Interno *</label><input type="text" id="form-serial" required class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold text-lg uppercase focus:border-indigo-500 outline-none" placeholder="Ej: 351A"></div>
+                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Equipo Asignado</label><input type="text" id="form-equipoAsignado" list="equipos-list" class="w-full rounded-lg border px-3 py-2 bg-gray-50" placeholder="Automático o seleccionar...">
+                        <datalist id="equipos-list"></datalist></div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado Operativo</label>
+                        <select id="form-estado" class="w-full rounded-lg border px-3 py-2 font-medium bg-white">
+                            <option value="En Reposo">⚪ En Reposo</option>
+                            <option value="En Uso">🔵 En Uso</option>
+                            <option value="Cargando">🟢 Cargando</option>
+                            <option value="Mantenimiento">🔴 Mantenimiento</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación Actual</label><input type="text" id="form-ubicacion" class="w-full rounded-lg border px-3 py-2" placeholder="Ej: Sala Baterías, Rack 1"></div>
+
+                    <!-- Datos Técnicos -->
+                    <div class="md:col-span-2 mt-2 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                        <h4 class="text-sm font-bold text-indigo-800 mb-3 border-b border-indigo-200 pb-1 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> Datos Técnicos Vitales (Opcional)</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="block text-xs font-bold text-gray-600 mb-1">Voltaje</label><select id="form-voltaje" class="w-full rounded border px-2 py-2 text-sm font-bold bg-white text-indigo-700"><option value="48V">48V</option><option value="24V">24V</option></select></div>
+                            <div><label class="block text-xs font-bold text-gray-600 mb-1">Capacidad (Ah)</label><input type="number" id="form-capacidadAh" class="w-full rounded border px-2 py-2 text-sm font-bold text-gray-700" placeholder="Ej: 750"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 mb-1">Agua (Litros)</label><input type="number" step="0.01" id="form-aguaCC" class="w-full rounded border px-2 py-2 text-sm bg-blue-50 text-blue-800 font-bold border-blue-200" placeholder="0.0"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 mb-1">Temp. Max (°C)</label><input type="number" step="0.1" id="form-temperaturaMax" class="w-full rounded border px-2 py-2 text-sm bg-red-50 text-red-800 font-bold border-red-200" placeholder="0.0"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="hidden"><input type="number" id="form-ciclosCarga"></div>
+                    <div class="hidden"><input type="date" id="form-ultimaAgua"></div>
+
+                    <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label><textarea id="form-observaciones" class="w-full rounded-lg border px-3 py-2 h-20" placeholder="Comentarios generales..."></textarea></div>
+                </div>
+                
+                <div class="flex justify-between pt-4 border-t items-center">
+                    <button type="button" id="btn-delete-report" onclick="deleteCurrentReport()" class="hidden text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar</button>
+                    <div class="flex gap-3 ml-auto">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button>
+                        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow-md">Guardar</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Formulario Cargadores -->
+            <form id="charger-form" class="p-6 space-y-6 hidden">
+                <input type="hidden" id="charger-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ID Cargador</label><input type="text" id="charger-codigo" required class="w-full rounded-lg border px-3 py-2 font-bold"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Amperaje</label><input type="number" step="0.1" id="charger-amperaje" class="w-full rounded-lg border px-3 py-2" placeholder="Ej: 100.5"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">N° Serie</label><input type="text" id="charger-serial" class="w-full rounded-lg border px-3 py-2"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Voltaje</label><select id="charger-tipo" class="w-full rounded-lg border px-3 py-2"><option value="48V">48V</option><option value="24V">24V</option></select></div>
+                    
+                    <div class="md:col-span-2 mt-4"><h4 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1">Estado de Componentes</h4></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Asas / Manillas</label><select id="charger-asas" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Dañado">Dañado</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Conector Salida</label><select id="charger-conector" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Dañado">Dañado</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">LED / Indicadores</label><select id="charger-led" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Fallo">Fallo</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Estado General</label><select id="charger-estado" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Con Defectos">Con Defectos</option><option value="Fuera de Servicio">Fuera de Servicio</option></select></div>
+                    
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label><input type="text" id="charger-ubicacion" class="w-full rounded-lg border px-3 py-2"></div>
+                    <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label><textarea id="charger-observaciones" class="w-full rounded-lg border px-3 py-2 h-24"></textarea></div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button></div>
+            </form>
+
+            <!-- Formulario Bitácora (ACTUALIZADO: COLORES Y ETIQUETAS CORRECTAS) -->
+            <form id="bitacora-form" class="p-6 space-y-5 hidden">
+                <input type="hidden" id="bitacora-id">
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-4">
+                    <h3 class="font-bold text-indigo-900 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5"></i> Registro de Operación</h3>
+                    <p class="text-xs text-indigo-700 mt-1">Registra el horómetro actual y la hora del evento.</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-1">Equipo / Grúa</label>
+                    <input type="text" id="bitacora-equipo" list="equipos-auto-list" class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold uppercase" placeholder="Seleccionar Grúa..." onchange="detectarEquipo(this.value)">
+                    <datalist id="equipos-auto-list"></datalist>
+                </div>
+
+                <!-- Panel de Cálculo Automático -->
+                <div id="calc-panel" class="bg-gray-50 p-3 rounded-lg border border-gray-200 hidden mb-4 transition-all">
+                    <div class="flex justify-between items-center text-sm mb-2">
+                        <span class="text-gray-500">Horómetro Anterior:</span>
+                        <span id="display-horometro-anterior" class="font-mono font-bold text-gray-800">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm font-bold text-green-600 border-t pt-2 mt-1">
+                        <span>Horas Trabajadas (Calc):</span>
+                        <span id="display-horas-trabajadas">+0.0 Hrs</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                     <div class="col-span-2">
+                        <label class="block text-sm font-bold text-gray-800 mb-1">Nuevo Horómetro (Actual)</label>
+                        <input type="number" step="0.1" id="bitacora-nuevo-horometro" class="w-full rounded-lg border-2 border-indigo-500 bg-indigo-50 px-3 py-2 font-bold text-lg text-indigo-900 outline-none" placeholder="Ej: 2987" oninput="calcularDiferencia()">
+                        <p class="text-xs text-gray-500 mt-1">Ingrese el valor que marca la máquina.</p>
+                     </div>
+                     
+                     <!-- SECCIÓN DE BATERÍAS (COLORES CORREGIDOS: ENTRADA=ROJO, SALIDA=VERDE) -->
+                     <div class="col-span-2 grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded border border-gray-200">
+                         <!-- ENTRADA (Rojo - Descargada/A Carga) -->
+                         <div>
+                            <label class="block text-xs font-bold text-red-600 mb-1 uppercase flex items-center gap-1"><i data-lucide="arrow-down-circle" class="w-3 h-3"></i> Entra (A Carga)</label>
+                            <input type="text" id="bitacora-bateria-saliente" list="baterias-list-auto" class="w-full rounded border border-red-200 px-2 py-1.5 uppercase text-sm text-red-700 font-bold" placeholder="Ej: 352B">
+                         </div>
+                         <!-- SALIDA (Verde - Cargada/A Uso) -->
+                         <div>
+                            <label class="block text-xs font-bold text-green-600 mb-1 uppercase flex items-center gap-1"><i data-lucide="arrow-up-circle" class="w-3 h-3"></i> Sale (A Uso)</label>
+                            <input type="text" id="bitacora-bateria" list="baterias-list-auto" class="w-full rounded border border-green-200 px-2 py-1.5 uppercase text-sm font-bold text-green-700" placeholder="Ej: 351A">
+                         </div>
+                         <datalist id="baterias-list-auto"></datalist>
+                     </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                        <input type="date" id="bitacora-fecha" class="w-full rounded-lg border px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                        <input type="time" id="bitacora-hora" class="w-full rounded-lg border px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Turno</label>
+                        <select id="bitacora-turno" class="w-full rounded-lg border px-3 py-2 text-sm">
+                            <option value="A">Turno A</option>
+                            <option value="B">Turno B</option>
+                            <option value="C">Turno C</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded shadow-lg hover:bg-indigo-700">Guardar</button></div>
+            </form>
+
+            <!-- Formulario Crear Usuario (Admin) -->
+            <form id="admin-user-form" class="p-6 space-y-4 hidden">
+                <p class="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg border border-yellow-200 mb-4"><strong>Atención:</strong> Al crear este usuario, tu sesión actual se cerrará.</p>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input type="text" id="admin-reg-name" required class="w-full rounded-lg border px-3 py-2"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Correo</label><input type="email" id="admin-reg-email" required class="w-full rounded-lg border px-3 py-2"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Rol</label><select id="admin-reg-role" class="w-full rounded-lg border px-3 py-2"><option value="Operario">Operario</option><option value="Supervisor">Supervisor</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Clave Provisional</label><input type="text" id="admin-reg-pass" value="123456" class="w-full rounded-lg border px-3 py-2 font-mono bg-gray-50"></div>
+                <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Crear Usuario</button></div>
+            </form>
+
+            <!-- Formulario Perfil -->
+            <form id="profile-form" class="p-6 space-y-6 hidden">
+                <div class="bg-gray-50 p-4 rounded-lg border mb-4">
+                    <p class="text-lg font-bold text-gray-800" id="profile-name-display">...</p>
+                    <p class="text-sm text-gray-600" id="profile-email-display">...</p>
+                    <p class="text-sm text-indigo-600 font-bold mt-1" id="profile-role-display">...</p>
+                </div>
+                <hr>
+                <div>
+                    <h4 class="font-bold text-gray-800 mb-3">Cambiar Contraseña</h4>
+                    <div class="space-y-3">
+                        <div><label class="block text-sm font-medium text-gray-700">Nueva Contraseña</label><input type="password" id="profile-new-pass" class="w-full rounded-lg border px-3 py-2"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Confirmar</label><input type="password" id="profile-confirm-pass" class="w-full rounded-lg border px-3 py-2"></div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cerrar</button><button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Actualizar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modales Adicionales (Registro Agua, Seguridad, Hidratación Rápida) -->
+    
+    <!-- Modal Búsqueda Hidratación (Antiguo) -->
+    <div id="hydration-modal" class="fixed inset-0 bg-indigo-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-bounce-in">
+            <div class="p-5 border-b bg-blue-50 rounded-t-2xl flex justify-between items-center">
+                <h3 class="text-lg font-bold text-blue-800 flex items-center gap-2"><i data-lucide="search" class="w-5 h-5"></i> Búsqueda Registro</h3>
+                <button onclick="document.getElementById('hydration-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <form id="hydration-form" class="p-6 space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Código de Batería</label>
+                    <div class="relative">
+                        <input type="text" id="hydro-serial" class="w-full rounded-lg border-2 border-blue-100 px-4 py-2 font-bold text-lg uppercase focus:border-blue-500 outline-none" placeholder="Ej: 351A" required oninput="detectarBateria(this.value)">
+                        <div id="hydro-status" class="absolute right-3 top-3"><i data-lucide="search" class="text-gray-400 w-5 h-5"></i></div>
+                    </div>
+                    <p id="hydro-info" class="text-xs text-gray-500 mt-1 h-4">Escribe el serial para buscar...</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Agua (Litros)</label><input type="number" step="0.01" id="hydro-agua" class="w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0.0"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Temp (°C)</label><input type="number" step="0.1" id="hydro-temp" class="w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="25.0"></div>
+                </div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha del Relleno</label><input type="datetime-local" id="hydro-fecha" class="w-full text-sm border-gray-300 rounded border p-2"></div>
+                <div class="flex gap-3 pt-2"><button type="button" onclick="document.getElementById('hydration-modal').classList.add('hidden')" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium">Cancelar</button><button type="submit" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700">Guardar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NUEVO: Modal Hidratación Directa (Desde Botón) -->
+    <div id="hydro-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in">
+            <div class="p-5 border-b bg-blue-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-blue-900 flex items-center gap-2"><i data-lucide="droplet" class="w-5 h-5"></i> Hidratación Rápida</h3>
+                <button onclick="document.getElementById('hydro-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <form id="hydro-form" class="p-6 space-y-4">
+                <input type="hidden" id="hydro-id">
+                <p class="text-sm text-gray-600">Batería: <span id="hydro-display-serial" class="font-bold text-gray-800"></span></p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Litros Agregados</label>
+                    <input type="number" step="0.01" id="hydro-litros" class="w-full rounded-lg border border-blue-300 px-3 py-2 font-bold text-blue-600" required placeholder="0.0">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('hydro-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-100 rounded text-sm font-bold text-gray-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold shadow hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="security-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-[60] hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-bounce-in">
+            <div class="mb-4 text-indigo-600 bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto"><i data-lucide="shield-alert" class="w-8 h-8"></i></div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Seguridad</h3>
+            <p class="text-sm text-gray-500 mb-6">Ingresa clave de Administrador.</p>
+            <input type="password" id="admin-auth-pass" placeholder="Clave Maestra" class="w-full rounded-lg border px-4 py-3 mb-4 text-center tracking-widest">
+            <div class="flex gap-3"><button onclick="document.getElementById('security-modal').classList.add('hidden')" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold">Cancelar</button><button onclick="confirmAdminAction()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg">Confirmar</button></div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LÓGICA -->
+    <script>
+        // 1. CONFIGURACIÓN SUPABASE
+        const SUPABASE_URL = "https://oxypjmaacvgenrphuasg.supabase.co"; 
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94eXBqbWFhY3ZnZW5ycGh1YXNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NDAxMDcsImV4cCI6MjA4MDMxNjEwN30.VJcnUireRV1k968-loHQGJNsH4cyMKR8JbIHQBr4weA"; 
+
+        let supabase, isDemoMode = false;
+        if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("✅ Supabase ON");
+        } else { isDemoMode = true; }
+
+        let currentUser = null, userData = null, userRole = 'Invitado';
+        let charts = {}, batteries = [], chargers = [], bitacora = [], equipos = [], localUsers = [];
+        let pendingAdminAction = null;
+        let selectedEquipo = null; 
+
+        const state = { currentView: 'dashboard', maintenanceView: 'baterias', maintenanceSearch: '', modalMode: 'create', searchTerm: '' };
+
+        // 2. HELPERS GLOBALES
+        function triggerAlarm(title, message, type) {
+            const container = document.getElementById('notification-container');
+            const alertDiv = document.createElement('div');
+            const colors = type === 'danger' ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800';
+            alertDiv.className = `p-4 rounded-xl shadow-lg border-l-4 pointer-events-auto slide-in-right flex items-start gap-3 ${colors}`;
+            alertDiv.innerHTML = `<div><h4 class="font-bold text-sm">${title}</h4><p class="text-xs">${message}</p></div>`;
+            container.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        window.exportToCSV = () => {
+            if (!batteries.length) return alert("No hay datos.");
+            const headers = ["Serial", "Marca", "Voltaje", "Estado", "Agua", "Fecha", "Ubicación"];
+            const rows = batteries.map(b => [b.numero_serie, b.tipo_equipo, b.voltaje, b.estado, b.litros_agua, b.fecha_registro, b.ubicacion_sala||''].map(e => `"${e}"`).join(","));
+            const csvContent = [headers.join(","), ...rows].join("\n");
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" })));
+            link.setAttribute("download", `Reporte.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
+        window.requestAdminAuth = (cb) => { pendingAdminAction = cb; document.getElementById('security-modal').classList.remove('hidden'); };
+        window.confirmAdminAction = () => {
+            if (document.getElementById('admin-auth-pass').value === 'PowerManager2025!') {
+                document.getElementById('security-modal').classList.add('hidden');
+                if (pendingAdminAction) pendingAdminAction();
+            } else alert("Clave Incorrecta");
+        };
+
+        // --- INIT PRINCIPAL ---
+        async function initApp() {
+            lucide.createIcons();
+            if (!isDemoMode) {
+                // Suscripciones en tiempo real
+                supabase.channel('users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { if(state.currentView === 'usuarios') fetchData(); }).subscribe();
+                supabase.channel('bats').on('postgres_changes', { event: '*', schema: 'public', table: 'reportes_mensuales' }, (p) => { handleRealtime(p, batteries); renderApp(); }).subscribe();
+                supabase.channel('chgs').on('postgres_changes', { event: '*', schema: 'public', table: 'charger_inventory' }, (p) => { handleRealtime(p, chargers); renderApp(); }).subscribe();
+                supabase.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { if(p.eventType === 'INSERT') bitacora.unshift(p.new); if(state.currentView === 'bitacora') renderBitacora(document.getElementById('app-content')); }).subscribe();
+                supabase.channel('equipos').on('postgres_changes', { event: '*', schema: 'public', table: 'equipos' }, (p) => { handleRealtime(p, equipos); }).subscribe();
+
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) handleUserLogin(session.user); else document.getElementById('auth-container').classList.remove('hidden');
+
+                supabase.auth.onAuthStateChange((e, s) => { if (e === 'SIGNED_IN') handleUserLogin(s.user); if (e === 'SIGNED_OUT') location.reload(); });
+            } else {
+                document.getElementById('demo-badge').classList.remove('hidden');
+                document.getElementById('local-reset-btn').classList.remove('hidden');
+                batteries = [{ id: '1', numero_serie: 'DEMO-01', tipo_equipo: 'Local', voltaje: '48V', estado: 'En Uso' }];
+                document.getElementById('auth-container').classList.remove('hidden');
+            }
+        }
+
+        async function handleUserLogin(user) {
+            currentUser = user;
+            if (isDemoMode) { userRole = 'Administrador'; userData = { nombre: 'Demo', role: 'Administrador' }; } 
+            else {
+                const { data } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+                if (!data) {
+                    userRole = 'Operario'; userData = { id: user.id, email: user.email, role: 'Operario', nombre: 'Usuario' };
+                    await supabase.from('users').insert([userData]);
+                } else { userRole = data.role; userData = data; }
+            }
+            
+            document.getElementById('user-display-name').innerText = userData?.nombre || user.email;
+            document.getElementById('user-display-role').innerText = userRole;
+            
+            // CORREGIDO: Lógica de turno más robusta
+            const now = new Date();
+            const h = now.getHours();
+            let shift = 'Turno A';
+            if (h >= 15 && h < 23) shift = 'Turno B';
+            else if (h >= 23 || h < 7) shift = 'Turno C';
+            document.getElementById('user-display-shift').innerText = shift;
+
+            document.getElementById('nav-history').classList.remove('hidden');
+
+            if (userRole === 'Administrador') {
+                document.getElementById('nav-users').classList.remove('hidden');
+                document.getElementById('user-display-role').className = "text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100";
+            } else {
+                document.getElementById('nav-users').classList.add('hidden');
+                document.getElementById('user-display-role').className = "text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200";
+            }
+
+            // Restore state from local storage (PERSISTENCIA)
+            const lastView = localStorage.getItem('pm_lastView') || 'dashboard';
+            const lastMaint = localStorage.getItem('pm_lastMaintView') || 'baterias';
+            
+            state.maintenanceView = lastMaint;
+
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('app-layout').classList.remove('hidden');
+            fetchData();
+            switchView(lastView); // Restore view
+        }
+
+        async function fetchData() {
+            if (!isDemoMode) {
+                const { data: b } = await supabase.from('reportes_mensuales').select('*'); if(b) batteries = b;
+                const { data: c } = await supabase.from('charger_inventory').select('*'); if(c) chargers = c.sort((a,b)=>a.codigo>b.codigo?1:-1);
+                const { data: log } = await supabase.from('bitacora_operaciones').select('*').order('created_at', {ascending: false}).limit(50); if(log) bitacora = log;
+                const { data: eq } = await supabase.from('equipos').select('*'); if(eq) equipos = eq;
+                
+                // CARGAR USUARIOS SI ES ADMIN
+                if (userRole === 'Administrador') {
+                    const { data: u } = await supabase.from('users').select('*');
+                    if (u) localUsers = u;
+                }
+            }
+            renderApp();
+        }
+
+        function handleRealtime(p, list) {
+            if (p.eventType === 'INSERT') list.push(p.new);
+            if (p.eventType === 'UPDATE') { const i = list.findIndex(x => x.id === p.new.id); if(i!==-1) list[i] = p.new; }
+            if (p.eventType === 'DELETE') { const i = list.findIndex(x => x.old.id); if(i!==-1) list.splice(i, 1); }
+        }
+
+        // --- MANEJO DE FORMULARIOS ---
+        // Login Handler Refinado (CORREGIDO PARA EVITAR RECARGA)
+        // Esperar a que el HTML cargue completo antes de ejecutar nada
+document.addEventListener("DOMContentLoaded", () => {
+
+const loginForm = document.getElementById('login-form');
+
+// Verificación de seguridad: ¿Existe el formulario?
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        // 1. ESTO EVITA LA RECARGA
+        e.preventDefault(); 
+        
+        console.log("Botón presionado, intentando login..."); // Para depurar
+
+        const emailInput = document.getElementById('login-email');
+        const passInput = document.getElementById('login-password');
+
+        const email = emailInput.value;
+        const pass = passInput.value;
+        
+        try { 
+            const { data, error } = await supabase.auth.signInWithPassword({ 
+                email: email, 
+                password: pass 
+            });
+
+            if (error) {
+                alert("Error Supabase: " + error.message);
+                console.error(error);
+            } else {
+                console.log("Login Exitoso:", data);
+                // Aquí puedes redirigir o recargar si quieres
+                // location.reload(); 
+            }
+        } catch(err){ 
+            alert("Error de conexión: " + err.message); 
+        } 
+    });
+} else {
+    console.error("¡ERROR CRÍTICO! No encontré el formulario con id='login-form'");
+}
+
+});
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => { e.preventDefault(); try { const {data, error} = await supabase.auth.signUp({ email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value }); if(error) throw error; if(data.user) { await supabase.from('users').insert([{ id: data.user.id, email: document.getElementById('reg-email').value, role: document.getElementById('reg-role').value, nombre: document.getElementById('reg-name').value }]); alert("Creado."); location.reload(); } } catch(err){ alert(err.message); } });
+
+        document.getElementById('form-serial').addEventListener('input', (e) => {
+            const serial = e.target.value.toUpperCase();
+            const match = serial.match(/^(\d+)[ABC]$/);
+            if (match) {
+                const eq = document.getElementById('form-equipoAsignado');
+                eq.value = "G" + match[1];
+                eq.classList.add('bg-green-50', 'text-green-700');
+                setTimeout(() => eq.classList.remove('bg-green-50', 'text-green-700'), 500);
+            }
+        });
+
+        // ============================================
+        // LÓGICA DE BITÁCORA (NUEVA VERSIÓN)
+        // ============================================
+        window.openBitacoraModal = () => {
+            setupModal('Bitácora', 'bitacora-form');
+            const now = new Date();
+            const h = now.getHours();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById('bitacora-fecha').value = `${year}-${month}-${day}`;
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('bitacora-hora').value = `${h.toString().padStart(2, '0')}:${minutes}`;
+            let shift = 'A';
+            if (h >= 15 && h < 23) shift = 'B';
+            else if (h >= 23 || h < 7) shift = 'C';
+            const turnoSelect = document.getElementById('bitacora-turno');
+            if (turnoSelect) turnoSelect.value = shift;
+        };
+
+        window.detectarEquipo = (val) => {
+            selectedEquipo = equipos.find(e => e.codigo.toLowerCase() === val.toLowerCase());
+            const panel = document.getElementById('calc-panel');
+            const displayAnterior = document.getElementById('display-horometro-anterior');
+            const inputNuevo = document.getElementById('bitacora-nuevo-horometro');
+            if (selectedEquipo) {
+                panel.classList.remove('hidden');
+                displayAnterior.innerText = selectedEquipo.horometro_actual;
+                inputNuevo.value = ''; // Limpiar para ingreso
+                inputNuevo.focus();
+                calcularDiferencia();
+            } else {
+                panel.classList.add('hidden');
+            }
+        };
+
+        window.calcularDiferencia = () => {
+            if (!selectedEquipo) return;
+            const nuevoVal = Number(document.getElementById('bitacora-nuevo-horometro').value) || 0;
+            const anteriorVal = Number(selectedEquipo.horometro_actual) || 0;
+            const diferencia = (nuevoVal - anteriorVal).toFixed(1);
+            const display = document.getElementById('display-horas-trabajadas');
+            if (diferencia >= 0) {
+                display.className = "text-green-600 font-bold";
+                display.innerText = `+${diferencia} Hrs`;
+            } else {
+                display.className = "text-red-600 font-bold animate-pulse";
+                display.innerText = `⚠️ Error (${diferencia} Hrs)`;
+            }
+        };
+
+        document.getElementById('bitacora-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nuevoHorometro = Number(document.getElementById('bitacora-nuevo-horometro').value);
+            const equipoNombre = val('bitacora-equipo');
+            let horasTrabajadas = 0;
+            let horometroFinal = nuevoHorometro;
+            if (selectedEquipo) {
+                const anterior = Number(selectedEquipo.horometro_actual) || 0;
+                if (nuevoHorometro < anterior) {
+                    if (!confirm(`⚠️ ALERTA: El horómetro nuevo (${nuevoHorometro}) es MENOR al anterior (${anterior}).\n\n¿Estás seguro de guardar este dato?`)) {
+                        return; // Cancelar guardado
+                    }
+                }
+                horasTrabajadas = nuevoHorometro - anterior;
+                if (horasTrabajadas < 0) horasTrabajadas = 0; 
+            } else {
+                horasTrabajadas = 0; 
+            }
+            const fechaStr = val('bitacora-fecha');
+            const horaStr = val('bitacora-hora');
+            const fechaFinal = new Date(`${fechaStr}T${horaStr}`);
+            const d = {
+                turno: val('bitacora-turno'), 
+                tipo_operacion: 'Uso',
+                equipo_id: equipoNombre, 
+                bateria_serie: val('bitacora-bateria'),
+                bateria_saliente: val('bitacora-bateria-saliente'),
+                horometro: horometroFinal,      
+                horas_trabajadas: horasTrabajadas,
+                fecha: fechaFinal,
+                created_at: new Date() 
+            };
+            try {
+                await supabase.from('bitacora_operaciones').insert([d]);
+                if (selectedEquipo) {
+                    await supabase.from('equipos').update({ 
+                        horometro_actual: horometroFinal, 
+                        ultima_actualizacion: new Date() 
+                    }).eq('id', selectedEquipo.id);
+                }
+                triggerAlarm('Registrado', `Grúa ${equipoNombre} - ${horasTrabajadas.toFixed(1)} Hrs agregadas`, 'success');
+                bitacora.unshift(d); 
+                fetchData();
+                closeModal();
+            } catch(err) { alert(err.message); }
+        });
+        // ============================================
+
+        // NUEVO: Funcionalidad Hidratación Rápida
+        window.openHydroModal = (id, serial) => {
+            document.getElementById('hydro-id').value = id;
+            document.getElementById('hydro-display-serial').innerText = serial;
+            document.getElementById('hydro-litros').value = '';
+            document.getElementById('hydro-modal').classList.remove('hidden');
+            document.getElementById('hydro-litros').focus();
+        };
+
+        document.getElementById('hydro-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('hydro-id').value;
+            const litros = Number(document.getElementById('hydro-litros').value);
+            
+            try {
+                // Solo actualiza litros_agua y la fecha, sin tocar el resto
+                const { error } = await supabase.from('reportes_mensuales')
+                    .update({ 
+                        litros_agua: litros, 
+                        fecha_registro: new Date() 
+                    })
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                triggerAlarm('Hidratación', 'Registro actualizado', 'success');
+                document.getElementById('hydro-modal').classList.add('hidden');
+                // Realtime actualizará la UI automáticamente
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        // Guardar Batería
+        document.getElementById('battery-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const numSafe = (id) => { const val = document.getElementById(id).value; return val === '' ? null : Number(val); };
+            const d = { 
+                numero_serie: val('form-serial'), voltaje: val('form-voltaje'), estado: val('form-estado'),
+                ciclos_mes: numSafe('form-ciclosCarga'), litros_agua: numSafe('form-aguaCC'), observaciones: val('form-observaciones'),
+                tipo_equipo: val('form-marca'), capacidad_ah: numSafe('form-capacidadAh'), temperatura_max: numSafe('form-temperaturaMax'), 
+                equipo_asignado: val('form-equipoAsignado'), ubicacion_sala: val('form-ubicacion'),
+                fecha_registro: val('form-fecha') ? new Date(val('form-fecha') + (val('form-hora') ? 'T'+val('form-hora') : 'T00:00')) : new Date(),
+                modelo: val('form-modelo'), anio_fabricacion: numSafe('form-anio'),
+            };
+            await handleSave('reportes_mensuales', d, state.modalMode, 'form-id');
+        });
+
+        // Guardar Cargador
+        document.getElementById('charger-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const d = { codigo: val('charger-codigo'), seriecargador: val('charger-serial'), tipo: val('charger-tipo'), estado: val('charger-estado'), ubicacion: val('charger-ubicacion'), observaciones: val('charger-observaciones'), amperaje: num('charger-amperaje'), estado_asas: val('charger-asas'), estado_conector: val('charger-conector'), estado_led: val('charger-led'), };
+            await handleSave('charger_inventory', d, state.modalMode, 'charger-id');
+        });
+
+        // Crear Usuario Admin (CORREGIDO)
+        document.getElementById('admin-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('admin-reg-email').value;
+            const password = document.getElementById('admin-reg-pass').value;
+            const nombre = document.getElementById('admin-reg-name').value;
+            const role = document.getElementById('admin-reg-role').value;
+
+            try {
+                const { data, error } = await supabase.auth.signUp({ email: email, password: password });
+                if (error) throw error;
+
+                if (data.user) {
+                    const { error: dbError } = await supabase.from('users').insert([{
+                        id: data.user.id, email: email, nombre: nombre, role: role
+                    }]);
+                    if (dbError) throw dbError;
+                    alert("Usuario creado exitosamente. Tu sesión se reiniciará.");
+                    location.reload();
+                }
+            } catch (err) { alert("Error: " + err.message); }
+        });
+
+        // HIDRATACIÓN RÁPIDA (Búsqueda)
+        window.openHydrationModal = () => {
+            document.getElementById('hydration-modal').classList.remove('hidden');
+            document.getElementById('hydration-form').reset();
+            const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('hydro-fecha').value = now.toISOString().slice(0,16);
+            document.getElementById('hydro-serial').focus();
+        };
+        window.detectarBateria = (val) => {
+            const found = batteries.find(b => b.numero_serie.toLowerCase() === val.toLowerCase());
+            const info = document.getElementById('hydro-info');
+            const icon = document.getElementById('hydro-status');
+            if (found) {
+                icon.innerHTML = `<i data-lucide="check-circle" class="text-green-500 w-6 h-6"></i>`;
+                info.innerHTML = `<span class="text-green-600 font-bold">Encontrada:</span> ${found.tipo_equipo} (${found.estado})`;
+            } else {
+                icon.innerHTML = `<i data-lucide="search" class="text-gray-400 w-5 h-5"></i>`;
+                info.innerHTML = `Escribe el serial completo.`;
+            }
+            lucide.createIcons();
+        };
+        document.getElementById('hydration-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const serial = document.getElementById('hydro-serial').value;
+            const bat = batteries.find(b => b.numero_serie.toLowerCase() === serial.toLowerCase());
+            const fechaInput = document.getElementById('hydro-fecha').value;
+            const updates = { litros_agua: num('hydro-agua'), temperatura_max: num('hydro-temp'), fecha_registro: new Date(fechaInput) };
+            if (bat) { const { error } = await supabase.from('reportes_mensuales').update(updates).eq('id', bat.id); if(error) alert(error.message); else triggerAlarm('Actualizado', `Batería ${serial} actualizada`, 'success'); } 
+            else { const nuevaData = { ...updates, numero_serie: serial, voltaje: '48V', estado: 'Cargando', tipo_equipo: 'Sin Marca', capacidad_ah: 0, ciclos_mes: 0, equipo_asignado: serial.match(/^(\d+)[ABC]$/) ? 'G' + serial.match(/^(\d+)[ABC]$/)[1] : null }; const { error } = await supabase.from('reportes_mensuales').insert([nuevaData]); if(error) alert(error.message); else triggerAlarm('Creada', `Batería ${serial} registrada por primera vez.`, 'success'); }
+            document.getElementById('hydration-modal').classList.add('hidden'); fetchData();
+        });
+
+        async function handleSave(table, data, mode, idField) {
+            try {
+                if(mode.includes('create')) { await supabase.from(table).insert([data]); triggerAlarm('Éxito', 'Guardado', 'success'); }
+                else { await supabase.from(table).update(data).eq('id', document.getElementById(idField).value); triggerAlarm('Éxito', 'Actualizado', 'success'); }
+                closeModal();
+            } catch(e) { alert(e.message); }
+        }
+
+        window.deleteCurrentReport = async () => {
+            const id = document.getElementById('form-id').value;
+            if(!confirm("¿Eliminar registro?")) return;
+            await supabase.from('reportes_mensuales').delete().eq('id', id);
+            closeModal();
+        };
+
+        window.deleteUser = async (id) => {
+            if(!confirm("¿Eliminar usuario?")) return;
+            // Solo borra de la tabla pública, la autenticación de Supabase requiere API backend para borrar usuarios auth real.
+            // Para este prototipo, borramos el registro de acceso.
+            await supabase.from('users').delete().eq('id', id);
+            fetchData();
+        };
+
+        // --- RENDER ---
+        window.switchView = (v) => {
+            state.currentView = v;
+            localStorage.setItem('pm_lastView', v);
+            
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                const isActive = b.id === `tab-${v}` || (v === 'usuarios' && b.id === 'nav-users') || (v === 'historial' && b.id === 'nav-history');
+                b.className = isActive ? "tab-btn bg-indigo-600 text-white flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium shadow-md" : "tab-btn bg-white text-gray-600 border flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium";
+            });
+            renderApp();
+        };
+        
+        window.switchMaintenanceView = (s) => { 
+            state.maintenanceView = s; 
+            localStorage.setItem('pm_lastMaintView', s);
+            renderApp(); 
+        };
+
+        function renderApp() {
+            const c = document.getElementById('app-content');
+            // NO limpiar innerHTML aquí para vistas que mantienen estado (input focus)
+            
+            if(Object.keys(charts).length > 0 && state.currentView !== 'dashboard' && state.currentView !== 'mantencion') {
+                Object.values(charts).forEach(x => x.destroy()); charts = {};
+            }
+
+            if(state.currentView === 'dashboard') { c.innerHTML = ''; renderDashboard(c); }
+            else if(state.currentView === 'inventario') renderInventory(c); // Render inteligente
+            else if(state.currentView === 'bitacora') { c.innerHTML = ''; renderBitacora(c); }
+            else if(state.currentView === 'mantencion') renderMaintenance(c); // Render inteligente
+            else if(state.currentView === 'usuarios') { c.innerHTML = ''; renderAdminUsers(c); }
+            else if(state.currentView === 'historial') { c.innerHTML = ''; renderHistory(c); }
+            lucide.createIcons();
+        }
+
+        // Render functions (Dashboard, Inventory, Maintenance, etc.) remain largely the same, just ensuring correct data binding
+        function renderDashboard(c) {
+            const total = batteries.length;
+            const counts = { 'En Uso':0, 'Cargando':0, 'En Reposo':0, 'Mantenimiento':0 };
+            batteries.forEach(b => {
+                const st = b.estado;
+                if(st === 'En Uso') counts['En Uso']++;
+                else if(st === 'Cargando') counts['Cargando']++;
+                else if(st === 'Mantenimiento') counts['Mantenimiento']++;
+                else counts['En Reposo']++;
+            });
+
+            const totalCiclos = batteries.reduce((acc, b) => acc + (Number(b.ciclos_mes) || 0), 0);
+            const ciclosProm = total > 0 ? Math.round(totalCiclos / total) : 0;
+            const soh = total > 0 ? (100 - (ciclosProm * 0.05)).toFixed(1) : 100;
+            const tempMax = batteries.reduce((max, b) => Math.max(max, (Number(b.temperatura_max)||0)), 0);
+
+            // Preparar datos para gráfico de barras (Top 10 Ciclos)
+            const topBats = [...batteries].sort((a,b) => (b.ciclos_mes||0) - (a.ciclos_mes||0)).slice(0,10);
+
+            const summaryHTML = `
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Resumen Operativo</h2>
+                        <p class="text-sm text-gray-500">Bienvenido, ${userData?.nombre || 'Usuario'}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.exportToCSV()" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 border border-indigo-200 transition">
+                            <i data-lucide="file-down" class="w-4 h-4"></i> Descargar Informe
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    ${renderSummaryCard('TOTAL BATERÍAS', total || '0', 'battery-charging', 'bg-blue-50 text-blue-600')}
+                    ${renderSummaryCard('SOH Estimado', soh + '%', 'activity', 'bg-indigo-50 text-indigo-600')}
+                    ${renderSummaryCard('Ciclos Promedio', ciclosProm, 'refresh-ccw', 'bg-purple-50 text-purple-600')}
+                    ${renderSummaryCard('Temp Máxima', tempMax + '°C', 'thermometer', 'bg-orange-50 text-orange-600')}
+                </div>`;
+            
+            c.innerHTML = `${summaryHTML}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow border h-80">
+                        <h3 class="font-bold text-gray-700 mb-4">Estado de Flota</h3>
+                        <div class="relative h-64"><canvas id="chart-estados"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow border h-80">
+                        <h3 class="font-bold text-gray-700 mb-4">Ciclos por Batería (Top 10)</h3>
+                        <div class="relative h-64"><canvas id="chart-cells"></canvas></div>
+                    </div>
+                </div>`;
+            
+            charts['estados'] = new Chart(document.getElementById('chart-estados'), { 
+                type: 'doughnut', 
+                data: { labels: Object.keys(counts), datasets: [{ label: 'Baterías', data: Object.values(counts), backgroundColor: ['#3b82f6', '#22c55e', '#e5e7eb', '#ef4444'] }] }, 
+                options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}} 
+            });
+
+            charts['cells'] = new Chart(document.getElementById('chart-cells'), { 
+                type: 'bar', 
+                data: { 
+                    labels: topBats.map(b => b.numero_serie), 
+                    datasets: [{ label: 'Ciclos Mes', data: topBats.map(b => b.ciclos_mes||0), backgroundColor: '#818cf8', borderRadius: 4 }] 
+                }, 
+                options: {responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}} 
+            });
+        }
+
+        function renderSummaryCard(title, value, icon, colorClass) { return `<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition"><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${title}</p><h3 class="text-3xl font-bold text-gray-800">${value}</h3></div><div class="${colorClass} w-12 h-12 rounded-xl flex items-center justify-center"><i data-lucide="${icon}" class="w-6 h-6"></i></div></div>`; }
+        
+        // --- INVENTARIO CORREGIDO (NO PIERDE FOCO) ---
+        function renderInventory(c) {
+            // Verificar si el layout ya existe para no borrar el input
+            if(!document.getElementById('inventory-layout')) {
+                c.innerHTML = `
+                <div id="inventory-layout">
+                    <div class="flex justify-between items-center mb-6">
+                        <div><h2 class="text-xl font-bold text-gray-800">Inventario</h2><p class="text-sm text-gray-500">Gestión de parámetros críticos.</p></div>
+                        <div class="flex gap-2">
+                            <input id="inv-search" oninput="state.searchTerm=this.value; renderApp()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Buscar por serial..." value="${state.searchTerm}">
+                            <button onclick="window.openCreateModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2 transition"><i data-lucide="plus" class="w-4 h-4"></i> Nueva Batería</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow border overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b"><tr><th class="table-header">Serial</th><th class="table-header">Información</th><th class="table-header">Energía</th><th class="table-header">Últimos Datos</th><th class="table-header">Estado</th><th class="table-header text-right">Acción</th></tr></thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+                </div>`;
+                // Restaurar foco si existe
+                const inp = document.getElementById('inv-search');
+                if(inp) { inp.value = state.searchTerm; inp.focus(); }
+            }
+
+            const term = state.searchTerm.toLowerCase();
+            const filtered = batteries.filter(b => (b.numero_serie||'').toLowerCase().includes(term));
+            let rows = filtered.map(b => {
+                const st = (b.estado || '').toLowerCase();
+                let statusClass = 'bg-gray-100 text-gray-800'; 
+                if (st.includes('uso')) statusClass = 'badge-azul';
+                else if (st.includes('mantenimiento') || st.includes('falla')) statusClass = 'badge-rojo';
+                else if (st.includes('carga') || st.includes('cargando')) statusClass = 'badge-verde';
+                else if (st.includes('reposo')) statusClass = 'badge-amarillo';
+                
+                return `<tr class="hover:bg-gray-50 border-b">
+                    <td class="table-cell font-bold text-indigo-700 text-lg">${b.numero_serie}</td>
+                    <td class="table-cell"><div class="font-medium text-gray-800">${b.tipo_equipo||'Sin Marca'}</div><div class="text-xs text-gray-500">${b.modelo||'-'}</div></td>
+                    <td class="table-cell"><div class="font-medium text-gray-800">${b.voltaje}</div><div class="text-xs text-gray-500">${b.capacidad_ah ? b.capacidad_ah+' Ah' : '-'}</div></td>
+                    <td class="table-cell"><div class="flex items-center gap-4"><span class="flex items-center gap-1 text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded"><i data-lucide="droplet" class="w-3 h-3"></i> ${b.litros_agua||0} L</span><span class="flex items-center gap-1 text-red-600 font-bold text-xs bg-red-50 px-2 py-1 rounded"><i data-lucide="thermometer" class="w-3 h-3"></i> ${b.temperatura_max||0}°C</span></div></td>
+                    <td class="table-cell"><span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${b.estado}</span></td>
+                    <td class="table-cell text-right flex justify-end gap-2">
+                        <button onclick="openHydroModal('${b.id}', '${b.numero_serie}')" class="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition flex items-center gap-1">
+                            <i data-lucide="droplet" class="w-3 h-3"></i>
+                        </button>
+                        <button onclick="window.openEditModal('${b.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded transition">
+                            Editar
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+            if (!rows) rows = `<tr><td colspan="6" class="p-8 text-center text-gray-400">No hay baterías registradas.</td></tr>`;
+            
+            document.getElementById('inventory-body').innerHTML = rows;
+        }
+
+        function renderBitacora(c) {
+            let rows = bitacora.map(b => {
+                const dObj = new Date(b.fecha || b.created_at);
+                const dateStr = dObj.toLocaleDateString('es-CL');
+                const timeStr = dObj.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+                return `<tr class="hover:bg-gray-50 border-b">
+                    <td class="table-cell">
+                        <div class="font-bold text-gray-800">${dateStr}</div>
+                        <div class="text-xs text-gray-500">${timeStr} hrs</div>
+                    </td>
+                    <td class="table-cell"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">${b.equipo_id||'-'}</span></td>
+                    <td class="table-cell font-mono text-gray-800 font-bold">${b.horometro||'-'} Hrs <span class="text-xs text-green-600 font-normal">(+${b.horas_trabajadas||0})</span></td>
+                    <td class="table-cell">
+                        <div class="flex flex-col gap-1">
+                            ${b.bateria_serie ? `<span class="text-xs text-green-700 font-bold bg-green-50 px-2 rounded w-fit">Entra: ${b.bateria_serie}</span>` : ''}
+                            ${b.bateria_saliente ? `<span class="text-xs text-red-700 font-bold bg-red-50 px-2 rounded w-fit">Sale: ${b.bateria_saliente}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="table-cell text-xs text-gray-500">${b.turno||'-'}</td>
+                </tr>`;
+            }).join('');
+            if(!rows) rows = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Sin movimientos registrados.</td></tr>`;
+            c.innerHTML = `<div class="flex justify-between items-center mb-6"><div><h2 class="text-xl font-bold text-gray-800">Bitácora de Operaciones</h2><p class="text-sm text-gray-500">Registro histórico de movimientos y horómetros.</p></div><button onclick="window.openBitacoraModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="calculator" class="w-4 h-4"></i> Registro Automático</button></div><div class="bg-white rounded-xl shadow border overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="table-header">Fecha/Hora</th><th class="table-header">Equipo</th><th class="table-header">Horómetro Total</th><th class="table-header">Movimiento Batería</th><th class="table-header text-center">Turno</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        }
+
+        // --- MANTENCIÓN CORREGIDO (NO PIERDE FOCO) ---
+        function renderMaintenance(c) {
+            const isBat = state.maintenanceView === 'baterias';
+            const btnClass = (active) => `px-6 py-3 text-sm font-bold ${active ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-800'}`;
+            
+            // Layout Base
+            if (!document.getElementById('maint-layout')) {
+                c.innerHTML = `
+                <div id="maint-layout">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Módulo de Mantención</h2>
+                    <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
+                        <button onclick="window.switchMaintenanceView('baterias')" id="btn-maint-bat" class="">Consumo de Agua (Baterías)</button>
+                        <button onclick="window.switchMaintenanceView('cargadores')" id="btn-maint-chg" class="">Infraestructura (Cargadores)</button>
+                    </div>
+                    <div id="maint-content"></div>
+                </div>`;
+            }
+            
+            // Actualizar clases botones
+            document.getElementById('btn-maint-bat').className = btnClass(isBat);
+            document.getElementById('btn-maint-chg').className = btnClass(!isBat);
+            
+            const content = document.getElementById('maint-content');
+            
+            if (isBat) {
+                // Render Baterías (Agua)
+                const term = state.maintenanceSearch ? state.maintenanceSearch.toLowerCase() : '';
+                const filteredBats = batteries.filter(b => (b.numero_serie||'').toLowerCase().includes(term));
+                const topWater = [...filteredBats].sort((a,b)=>(Number(b.litros_agua)||0)-(Number(a.litros_agua)||0)).slice(0,10);
+                
+                const rows = filteredBats.map(b => `<tr class="hover:bg-gray-50 border-b"><td class="table-cell font-bold text-gray-700">${b.numero_serie||'-'}</td><td class="table-cell">${b.ultimaAgua||'-'}</td><td class="table-cell"><span class="font-bold text-blue-600">${b.litros_agua||0} L</span></td><td class="table-cell text-right"><button onclick="window.openEditModal('${b.id}')" class="text-indigo-600 font-bold hover:underline">Detalles</button></td></tr>`).join('');
+                
+                // Solo reconstruir si cambió la vista o es primera vez
+                if(!document.getElementById('maint-bat-view')) {
+                    content.innerHTML = `
+                    <div id="maint-bat-view">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <div><h3 class="font-bold text-lg text-gray-700">Consumo</h3><p class="text-xs text-gray-500">Gestión de consumo de agua.</p></div>
+                            <div class="flex gap-2 w-full md:w-auto">
+                                <input id="maint-search" oninput="state.maintenanceSearch=this.value; renderApp()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Buscar batería..." value="${state.maintenanceSearch}">
+                                <button onclick="openHydrationModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2 font-bold transition whitespace-nowrap"><i data-lucide="droplet" class="w-5 h-5"></i> Registro</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6"><div class="bg-white p-5 rounded-xl shadow border col-span-3"><h3 class="font-bold mb-4 text-gray-700">Ranking Consumo</h3><div class="h-64"><canvas id="chart-water"></canvas></div></div></div>
+                        <div class="bg-white rounded-xl shadow border overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="table-header">Serial</th><th class="table-header">Última Fecha</th><th class="table-header">Consumo</th><th class="table-header text-right">Acción</th></tr></thead><tbody id="maint-bat-body"></tbody></table></div>
+                    </div>`;
+                    setTimeout(() => { const ctx = document.getElementById('chart-water'); if (ctx) charts['water'] = new Chart(ctx, { type: 'bar', data: { labels: topWater.map(b=>b.numero_serie), datasets: [{ label: 'Agua (cc)', data: topWater.map(b=>b.litros_agua||0), backgroundColor: '#3B82F6' }] }, options: {responsive:true, maintainAspectRatio:false} }); }, 0);
+                }
+                
+                // Actualizar solo tabla y chart
+                document.getElementById('maint-bat-body').innerHTML = rows;
+                const inp = document.getElementById('maint-search'); if(inp) { inp.value = state.maintenanceSearch; inp.focus(); }
+
+            } else {
+                // Render Cargadores
+                const cards = chargers.map(ch => {
+                    let borderClass = 'border-l-gray-400'; let badgeClass = 'bg-gray-100 text-gray-800';
+                    const st = String(ch.estado).trim().toLowerCase();
+                    if (st === 'operativo') { borderClass = 'border-l-green-500'; badgeClass = 'bg-green-100 text-green-800'; } 
+                    else if (st === 'con defectos') { borderClass = 'border-l-yellow-500'; badgeClass = 'bg-yellow-100 text-yellow-800'; } 
+                    else if (st === 'fuera de servicio') { borderClass = 'border-l-red-500'; badgeClass = 'bg-red-100 text-red-800'; }
+                    return `<div class="bg-white p-5 rounded-xl shadow border-l-4 ${borderClass} hover:shadow-md transition"><div class="flex justify-between mb-3"><h4 class="font-bold text-xl text-gray-800">${ch.codigo}</h4><span class="px-3 py-1 rounded-full text-xs ${badgeClass} font-bold capitalize">${ch.estado}</span></div><p class="text-xs text-gray-500 mb-4 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${ch.ubicacion||'Sin ubicación'}</p><div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100"><span class="text-xs font-mono text-gray-400">${ch.amperaje ? ch.amperaje+'A' : '-'}</span><button onclick="window.openChargerModal('${ch.id}')" class="w-full bg-gray-50 hover:bg-gray-100 py-2 rounded text-xs font-bold text-gray-700 transition">Gestionar</button></div></div>`;
+                }).join('');
+                content.innerHTML = `<div class="flex justify-between items-center mb-6"><h3 class="font-bold text-xl text-gray-700">Infraestructura</h3><button onclick="window.openCreateChargerModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 flex items-center gap-2 text-sm font-bold"><i data-lucide="plus" class="w-4 h-4"></i> Nuevo Cargador</button></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">${cards}</div>`;
+            }
+        }
+
+        // --- HISTORIAL CON EDICIÓN (SOLO ADMIN) ---
+        function renderHistory(c) {
+            c.innerHTML = `<div class="text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-indigo-600"></i></div>`;
+            
+            const rows = bitacora.map(item => { // Usando datos reales de bitácora
+                const d = new Date(item.fecha || item.created_at);
+                const deleteBtn = userRole === 'Administrador' ? `<button onclick="deleteBitacoraItem('${item.id}')" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="table-cell">${d.toLocaleDateString('es-CL')} ${d.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'})}</td>
+                    <td class="table-cell font-bold uppercase">${item.equipo_id || '-'}</td>
+                    <td class="table-cell">
+                        ${item.bateria_serie ? `<span class="text-green-600 font-bold text-xs">Entra: ${item.bateria_serie}</span>` : ''}
+                        ${item.bateria_saliente ? `<br><span class="text-red-600 font-bold text-xs">Sale: ${item.bateria_saliente}</span>` : ''}
+                    </td>
+                    <td class="table-cell font-mono">${item.horometro || 0} (+${item.horas_trabajadas || 0})</td>
+                    <td class="table-cell text-right">${deleteBtn}</td>
+                </tr>`;
+            }).join('');
+
+            c.innerHTML = `
+            <div class="flex justify-between items-center mb-6"><div><h2 class="text-2xl font-bold text-gray-800">Historial Global</h2><p class="text-sm text-gray-500">Registro histórico completo.</p></div></div>
+            <div class="bg-white rounded-xl shadow border overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b border-gray-200"><tr><th class="table-header">Fecha</th><th class="table-header">Equipo</th><th class="table-header">Movimientos</th><th class="table-header">Horómetro</th><th class="table-header text-right">Acción</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+            lucide.createIcons();
+        }
+
+        window.deleteBitacoraItem = async (id) => {
+            if(!confirm("¿Eliminar registro histórico? Esto no afectará los horómetros actuales.")) return;
+            await supabase.from('bitacora_operaciones').delete().eq('id', id);
+            // Recargar localmente
+            bitacora = bitacora.filter(b => b.id !== id);
+            renderApp();
+        };
+
+        // --- USUARIOS (SOLO ADMIN - VISIBLE Y LIMPIO) ---
+        function renderAdminUsers(c) {
+            if (userRole !== 'Administrador') return c.innerHTML = `<div class="p-10 text-center text-red-600 font-bold">⛔ Acceso Denegado</div>`;
+            
+            const rows = (localUsers||[]).map(u => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="table-cell font-bold text-gray-800">${u.nombre || 'Sin nombre'}</td>
+                    <td class="table-cell text-gray-600">${u.email}</td>
+                    <td class="table-cell"><span class="px-2 py-1 rounded text-xs font-bold ${u.role==='Administrador'?'bg-indigo-100 text-indigo-700':'bg-gray-100 text-gray-700'}">${u.role}</span></td>
+                    <td class="table-cell text-right"><button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs border border-red-200 bg-red-50 px-3 py-1 rounded">Eliminar</button></td>
+                </tr>`).join('');
+                
+            c.innerHTML = `
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-bold text-xl text-gray-800">Gestión de Usuarios</h2>
+                <button onclick="state.modalMode='admin_create'; setupModal('Nuevo Usuario', 'admin-user-form');" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow flex items-center gap-2"><i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo</button>
+            </div>
+            <div class="bg-white rounded-xl shadow border overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b"><tr><th class="table-header">Nombre</th><th class="table-header">Correo</th><th class="table-header">Cargo</th><th class="table-header text-right">Acciones</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4" class="p-4 text-center text-gray-400">Cargando usuarios...</td></tr>'}</tbody>
+                </table>
+            </div>`;
+        }
+        
+        window.closeModal = () => document.getElementById('modal-overlay').classList.add('hidden');
+        window.openCreateModal = () => { state.modalMode='create'; setupModal('Nueva Batería', 'battery-form'); document.getElementById('form-fecha').value = ''; document.getElementById('form-hora').value = ''; if(userRole!=='Administrador') document.getElementById('admin-only-fields').classList.add('hidden'); else document.getElementById('admin-only-fields').classList.remove('hidden'); document.getElementById('btn-delete-report').classList.add('hidden'); };
+        window.openEditModal = (id) => { const b = batteries.find(x=>x.id===id); if(!b) return; state.modalMode='edit'; setupModal('Editar '+b.numero_serie, 'battery-form'); if(userRole!=='Administrador') document.getElementById('admin-only-fields').classList.add('hidden'); else document.getElementById('admin-only-fields').classList.remove('hidden'); fillForm('form', {id:b.id, serial:b.numero_serie, marca:b.tipo_equipo, voltaje:b.voltaje, capacidadAh:b.capacidadAh, estado:b.estado, ciclosCarga:b.ciclos_mes, aguaCC:b.litros_agua, observaciones:b.observaciones, modelo:b.modelo, anio:b.anio_fabricacion, ubicacion:b.ubicacion_sala }); if(b.fecha_registro) { const d=new Date(b.fecha_registro); document.getElementById('form-fecha').value=d.toISOString().slice(0,10); document.getElementById('form-hora').value=d.toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'}); } else { document.getElementById('form-fecha').value = ''; document.getElementById('form-hora').value = ''; } document.getElementById('btn-delete-report').classList.remove('hidden'); };
+        window.openCreateChargerModal = () => { state.modalMode='create_chg'; setupModal('Nuevo Cargador', 'charger-form'); };
+        window.openChargerModal = (id) => { const c = chargers.find(x=>x.id===id); if(!c) return; state.modalMode='edit_chg'; setupModal('Editar '+c.codigo, 'charger-form'); fillForm('charger', {id:c.id, codigo:c.codigo, serial:c.seriecargador, tipo:c.tipo, estado:c.estado, ubicacion:c.ubicacion, observaciones:c.observaciones, amperaje:c.amperaje, asas:c.estado_asas, conector:c.estado_conector, led:c.estado_led}); };
+        window.openProfileModal = () => { document.getElementById('profile-name-display').innerText = userData?.nombre; document.getElementById('profile-email-display').innerText = userData?.email; setupModal('Mi Perfil', 'profile-form'); };
+        function setupModal(title, formId) { document.getElementById('modal-title').innerText = title; ['battery-form','charger-form', 'admin-user-form', 'profile-form', 'bitacora-form'].forEach(f=>document.getElementById(f).classList.add('hidden')); document.getElementById(formId).classList.remove('hidden'); document.getElementById(formId).reset(); document.getElementById('modal-overlay').classList.remove('hidden'); }
+        function fillForm(prefix, data) { Object.keys(data).forEach(k => { const el = document.getElementById(prefix+'-'+k); if(el) el.value = data[k]||''; }); }
+        const val = (id) => document.getElementById(id).value;
+        const num = (id) => Number(document.getElementById(id).value);
+        window.toggleAuthView = (v) => { ['login-view','register-view'].forEach(id=>document.getElementById(id).classList.add('hidden')); document.getElementById(v+'-view').classList.remove('hidden'); };
+        window.showAuth = () => { document.getElementById('auth-container').classList.remove('hidden'); document.getElementById('app-layout').classList.add('hidden'); };
+        window.logout = async () => { if(supabase) await supabase.auth.signOut(); location.reload(); };
+
+        initApp();
+    </script>
+</body>
+</html>
