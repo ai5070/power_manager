@@ -411,28 +411,33 @@
         };
 
         document.addEventListener('input', (e) => {
-            if (e.target && e.target.id === 'bat-serial') {
-                let serial = e.target.value.toUpperCase().trim();
-                const asignadoInput = document.getElementById('bat-asignado');
-                if (!asignadoInput) return;
+    if (e.target && e.target.id === 'bat-serial') {
+        let serial = e.target.value.toUpperCase().trim();
+        const asignadoInput = document.getElementById('bat-asignado');
+        if (!asignadoInput) return;
 
-                const numerosMatch = serial.match(/\d+/);
-                
-                if (numerosMatch) {
-                    const numero = parseInt(numerosMatch[0]);
+        // Extraer el número puro del serial (ej: de "120A" saca "120")
+        const numerosMatch = serial.match(/\d+/);
+        
+        if (numerosMatch) {
+            const numero = parseInt(numerosMatch[0]);
 
-                    // RANGO 103 al 145 -> Order Picker (OP)
-                    if (numero >= 103 && numero <= 145) {
-                        asignadoInput.value = `OP-${numero}`;
-                    } 
-                    // RANGO 349 al 364 -> Grúa (G)
-                    else if (numero >= 349 && numero <= 364) {
-                        asignadoInput.value = `G-${numero}`;
-                    }
-                    // Fuera de rango no hace nada para permitir escritura manual
-                }
+            // VALIDACIÓN EXACTA POR RANGOS SOLICITADOS
+            if (numero >= 103 && numero <= 145) {
+                // Rango 103-145: EXCLUSIVAMENTE Order Pickers
+                asignadoInput.value = `OP-${numero}`;
+            } 
+            else if (numero >= 349 && numero <= 364) {
+                // Rango 349-364: EXCLUSIVAMENTE Grúas
+                asignadoInput.value = `G-${numero}`;
             }
-        });
+            else {
+                // Fuera de estos rangos, no asumimos nada para evitar errores
+                asignadoInput.value = ""; 
+            }
+        }
+    }
+});
         
         // --- INIT PRINCIPAL ---
         async function initApp() {
