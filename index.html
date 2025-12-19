@@ -410,6 +410,30 @@
             } else alert("Clave Incorrecta");
         };
 
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'bat-serial') {
+                let serial = e.target.value.toUpperCase().trim();
+                const asignadoInput = document.getElementById('bat-asignado');
+                if (!asignadoInput) return;
+
+                const numerosMatch = serial.match(/\d+/);
+                
+                if (numerosMatch) {
+                    const numero = parseInt(numerosMatch[0]);
+
+                    // RANGO 103 al 145 -> Order Picker (OP)
+                    if (numero >= 103 && numero <= 145) {
+                        asignadoInput.value = `OP-${numero}`;
+                    } 
+                    // RANGO 349 al 364 -> Grúa (G)
+                    else if (numero >= 349 && numero <= 364) {
+                        asignadoInput.value = `G-${numero}`;
+                    }
+                    // Fuera de rango no hace nada para permitir escritura manual
+                }
+            }
+        });
+        
         // --- INIT PRINCIPAL ---
         async function initApp() {
             lucide.createIcons();
