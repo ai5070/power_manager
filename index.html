@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerManager Pro - Gestión de Baterías 4.9.5</title>
+    <title>PowerManager Pro - Gestión de Baterías 4.9.7</title>
     
     <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -31,11 +31,11 @@
             #qr-print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         }
 
-        /* --- ESTILOS DE BADGES --- */
-        .badge-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; } /* En Uso */
-        .badge-rojo { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Falla / Mantenimiento */
-        .badge-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; } /* Cargando / Operativo */
-        .badge-amarillo { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Reposo / Alerta */
+        /* --- ESTILOS DE BADGES ACTUALIZADOS --- */
+        .badge-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; } /* En Reposo */
+        .badge-rojo { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Fuera de Servicio */
+        .badge-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; } /* Cargada */
+        .badge-naranja { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; } /* En Carga */
         
         /* Badges Historial */
         .tag-op { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
@@ -109,6 +109,7 @@
                         <div id="alarm-indicator" class="hidden flex items-center bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 animate-pulse cursor-pointer" onclick="window.switchView('mantencion'); window.switchMaintenanceView('cargadores');">
                             <i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i> <span id="alarm-count">0</span> Alertas
                         </div>
+                        <!-- DATOS DE USUARIO CORREGIDOS -->
                         <div class="text-right mr-2 cursor-pointer hover:opacity-80" onclick="window.openProfileModal()">
                             <p class="font-bold text-gray-900 text-sm flex items-center justify-end gap-2"><span id="user-display-name">Usuario</span> <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400"></i></p>
                             <div class="flex items-center justify-end gap-1 text-xs mt-0.5">
@@ -187,10 +188,10 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Operativo</label>
                         <select id="form-estado" class="w-full rounded-lg border px-3 py-2 font-medium bg-white">
-                            <option value="En Reposo">⚪ En Reposo</option>
-                            <option value="En Uso">🔵 En Uso</option>
-                            <option value="Cargando">🟢 Cargando</option>
-                            <option value="Mantenimiento">🔴 Mantenimiento</option>
+                            <option value="En Reposo">🔵 En Reposo</option>
+                            <option value="Fuera de Servicio">🔴 Fuera de Servicio</option>
+                            <option value="Cargada">🟢 Cargada</option>
+                            <option value="En Carga">🟠 En Carga</option>
                         </select>
                     </div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación Actual</label><input type="text" id="form-ubicacion" class="w-full rounded-lg border px-3 py-2" placeholder="Ej: Sala Baterías, Rack 1"></div>
@@ -214,7 +215,7 @@
                 
                 <div class="flex justify-between pt-4 border-t items-center">
                     <!-- BOTÓN ELIMINAR CORREGIDO -->
-                    <button type="button" id="btn-delete-report" onclick="deleteCurrentReport()" class="text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1 bg-red-50 border border-red-200 px-3 py-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Registro</button>
+                    <button type="button" id="btn-delete-report" onclick="deleteCurrentReport()" class="hidden text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1 bg-red-50 border border-red-200 px-3 py-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Registro</button>
                     <div class="flex gap-3 ml-auto">
                         <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded text-gray-700 font-bold">Cancelar</button>
                         <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow-md">Guardar</button>
@@ -421,6 +422,10 @@
         let pendingAdminAction = null;
         let selectedEquipo = null; 
 
+        // CONSTANTES PARA EQUIPOS ANTIGUOS
+        const OLD_BATTERIES = ['G-29T', 'G-30T', 'G-32T', 'G-33T', 'G-35T', 'G-36T', 'G-90T', 'G-91T', 'G-92T', 'G-93T', 'G-94T', 'G-97T', 'G-98T'];
+        const OLD_CHARGERS = ['G-03', 'G-111', 'G-223', 'G-01', 'G-219'];
+
         const state = { currentView: 'dashboard', maintenanceView: 'baterias', maintenanceSearch: '', modalMode: 'create', searchTerm: '' };
 
         // 2. HELPERS GLOBALES
@@ -459,8 +464,6 @@
             if (!isDemoMode) {
                 // Suscripciones en tiempo real
                 supabaseClient.channel('users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { if(state.currentView === 'usuarios') fetchData(); }).subscribe();
-                
-                // NOTA: RenderApp se llama aquí para refrescar la UI automáticamente
                 supabaseClient.channel('bats').on('postgres_changes', { event: '*', schema: 'public', table: 'reportes_mensuales' }, (p) => { handleRealtime(p, batteries); renderApp(); }).subscribe();
                 supabaseClient.channel('chgs').on('postgres_changes', { event: '*', schema: 'public', table: 'charger_inventory' }, (p) => { handleRealtime(p, chargers); renderApp(); }).subscribe();
                 supabaseClient.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { if(p.eventType === 'INSERT') bitacora.unshift(p.new); if(state.currentView === 'bitacora' || state.currentView === 'historial') renderApp(); }).subscribe();
@@ -522,6 +525,7 @@
 
         async function fetchData() {
             if (!isDemoMode) {
+                // MODIFICADO: Ordenar por fecha ASCENDENTE
                 const { data: b } = await supabaseClient.from('reportes_mensuales').select('*').order('created_at', { ascending: true }); 
                 if(b) batteries = b;
                 const { data: c } = await supabaseClient.from('charger_inventory').select('*'); if(c) chargers = c.sort((a,b)=>a.codigo>b.codigo?1:-1);
@@ -565,12 +569,27 @@
         document.getElementById('form-serial').addEventListener('input', (e) => {
             const serial = e.target.value.toUpperCase().trim();
             const eq = document.getElementById('form-equipoAsignado');
+
+            // 1. REGLA: Si es BATERÍA ANTIGUA, no asignar nada o marcar especial
+            if (OLD_BATTERIES.includes(serial)) {
+                eq.value = ""; // O "Batería Antigua" si prefieres
+                eq.classList.remove('bg-green-50', 'text-green-700');
+                return;
+            }
             
-            const explicitMatch = serial.match(/^(OP|G|T)[-\s]?(\d+)[ABC]$/); 
+            const explicitMatch = serial.match(/^(OP|G|T)[-\s]?(\d+)[ABC]?$/); 
             if (explicitMatch) {
                 const prefix = explicitMatch[1]; 
-                const num = explicitMatch[2];    
-                eq.value = `${prefix}-${num}`;
+                const num = explicitMatch[2];
+                const generatedID = `${prefix}-${num}`;
+
+                // 2. REGLA: Si el ID generado es un CARGADOR ANTIGUO, NO asignar como equipo
+                if (OLD_CHARGERS.includes(generatedID)) {
+                     eq.value = ""; // Evitar confusión con grúa
+                     return;
+                }
+
+                eq.value = generatedID;
                 highlightInput(eq);
                 return;
             }
@@ -578,11 +597,21 @@
             const numberMatch = serial.match(/^(\d+)[ABC]$/);
             if (numberMatch) {
                 const num = parseInt(numberMatch[1]);
+                let generatedID = "";
+
                 if (num >= 100 && num <= 200) { // Rango OP
-                    eq.value = `OP-${num}`;
+                    generatedID = `OP-${num}`;
                 } else {
-                    eq.value = `G-${num}`;
+                    generatedID = `G-${num}`;
                 }
+
+                // VALIDACIÓN EXTRA: Si el ID generado (ej: G-111) es un cargador, abortar
+                if (OLD_CHARGERS.includes(generatedID)) {
+                    eq.value = "";
+                    return;
+                }
+
+                eq.value = generatedID;
                 highlightInput(eq);
             }
         });
@@ -702,26 +731,24 @@
             const litros = Number(document.getElementById('hydro-litros').value);
             
             try {
-                // 1. Obtener datos actuales de la batería
                 const existingBattery = batteries.find(b => b.id === id);
                 if (!existingBattery) throw new Error("Batería no encontrada");
 
-                // 2. Crear nuevo objeto clonando el anterior
-                const newRecord = {
-                    ...existingBattery,
-                    id: undefined, // Eliminar ID para que se genere uno nuevo
-                    litros_agua: litros,
-                    fecha_registro: new Date()
-                };
+                // CLONAR Y LIMPIAR ID PARA CREAR NUEVO
+                const newRecord = { ...existingBattery };
+                delete newRecord.id; 
+                delete newRecord.created_at; 
+                
+                newRecord.litros_agua = litros;
+                newRecord.fecha_registro = new Date();
 
-                // 3. Insertar como NUEVO registro (Historial)
                 const { error } = await supabaseClient.from('reportes_mensuales').insert([newRecord]);
                 
                 if (error) throw error;
                 
                 triggerAlarm('Hidratación', 'Nuevo registro histórico creado', 'success');
                 document.getElementById('hydro-modal').classList.add('hidden');
-                // Realtime actualizará la UI
+                // Realtime actualizará la UI automáticamente
             } catch (err) {
                 alert(err.message);
             }
@@ -841,7 +868,6 @@
                 alert(err.message);
             }
         });
-        // -------------------------------------------------------------
 
         async function handleSave(table, data, mode, idField) {
             try {
@@ -859,20 +885,18 @@
             if(!id) return alert("Error: No se encontró ID para eliminar.");
             if(!confirm("⚠️ ¿Estás seguro de eliminar este registro permanentemente?")) return;
             
-            // Feedback visual inmediato
+            // Feedback visual
             const originalText = btn.innerHTML;
             btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Eliminando...`;
             btn.disabled = true;
 
             try {
-                // Intento de borrado
                 const { error } = await supabaseClient.from('reportes_mensuales').delete().eq('id', id);
                 
                 if (error) {
                     throw new Error(error.message);
                 }
 
-                // ÉXITO: Actualización local forzada y limpieza
                 batteries = batteries.filter(b => b.id != id); 
                 renderApp(); 
                 closeModal();
@@ -988,12 +1012,10 @@
 
         function renderSummaryCard(title, value, icon, colorClass) { return `<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition"><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${title}</p><h3 class="text-3xl font-bold text-gray-800">${value}</h3></div><div class="${colorClass} w-12 h-12 rounded-xl flex items-center justify-center"><i data-lucide="${icon}" class="w-6 h-6"></i></div></div>`; }
         
-        // --- FUNCIÓN DE AGRUPACIÓN (VISTA MAESTRA) ---
         function getUniqueBatteries() {
-            // Como batteries ya viene ordenado ASC por fecha, el último que procesemos será el más reciente
             const map = new Map();
             batteries.forEach(b => {
-                map.set(b.numero_serie, b); // Sobrescribe siempre, quedando el último (más nuevo)
+                map.set(b.numero_serie, b); 
             });
             return Array.from(map.values());
         }
@@ -1023,7 +1045,6 @@
             const term = state.searchTerm.toLowerCase();
             const uniqueBatteries = getUniqueBatteries();
             
-            // Filtrar y luego ORDENAR DESCENDENTE para mostrar lo más nuevo primero
             const filtered = uniqueBatteries
                 .filter(b => (b.numero_serie||'').toLowerCase().includes(term))
                 .sort((a,b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
@@ -1107,7 +1128,6 @@
                 const term = state.maintenanceSearch ? state.maintenanceSearch.toLowerCase() : '';
                 const uniqueBatteries = getUniqueBatteries();
                 
-                // Filtrar y luego ORDENAR DESCENDENTE para mostrar lo más nuevo primero
                 const filteredBats = uniqueBatteries
                     .filter(b => (b.numero_serie||'').toLowerCase().includes(term))
                     .sort((a,b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
@@ -1151,7 +1171,6 @@
                     else if (st === 'con defectos') { borderClass = 'border-l-yellow-500'; badgeClass = 'bg-yellow-100 text-yellow-800'; } 
                     else if (st === 'fuera de servicio') { borderClass = 'border-l-red-500'; badgeClass = 'bg-red-100 text-red-800'; }
                     
-                    // --- NUEVO: Indicador de actualización (simulado) ---
                     const updatedText = ch.updated_at ? new Date(ch.updated_at).toLocaleDateString() : 'Hoy';
 
                     return `<div class="bg-white p-5 rounded-xl shadow border-l-4 ${borderClass} hover:shadow-md transition">
@@ -1174,13 +1193,12 @@
         function renderHistory(c) {
             c.innerHTML = `<div class="text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-indigo-600"></i></div>`;
             
-            // 1. COMBINAR DOS FUENTES DE DATOS: Bitacora (Operaciones) + Batteries (Mantenciones)
             const combinedHistory = [
                 ...bitacora.map(b => ({
                     type: 'Operación',
                     date: new Date(b.fecha || b.created_at),
-                    main_id: b.equipo_id || 'S/N', // Equipo
-                    sub_id: b.bateria_serie || '-', // Batería
+                    main_id: b.equipo_id || 'S/N', 
+                    sub_id: b.bateria_serie || '-', 
                     metric: `${b.horometro} Hrs`,
                     detail: b.bateria_saliente ? `Sale: ${b.bateria_saliente}` : 'Ingreso',
                     water: '-',
@@ -1193,8 +1211,8 @@
                 ...batteries.map(b => ({
                     type: 'Mantención',
                     date: new Date(b.fecha_registro || b.created_at),
-                    main_id: b.numero_serie, // Batería (En mantención el protagonista es la batería)
-                    sub_id: b.ubicacion_sala || '-', // Ubicación
+                    main_id: b.numero_serie,
+                    sub_id: b.ubicacion_sala || '-', 
                     metric: '-',
                     detail: b.estado,
                     water: b.litros_agua ? `${b.litros_agua} L` : '-',
@@ -1204,7 +1222,7 @@
                     raw: b,
                     is_op: false
                 }))
-            ].sort((a,b) => b.date - a.date); // Ordenar por fecha descendente (más reciente arriba)
+            ].sort((a,b) => b.date - a.date); 
 
             const rows = combinedHistory.map(item => {
                 const dateStr = item.date.toLocaleDateString('es-CL');
