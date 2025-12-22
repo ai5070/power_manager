@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerManager Pro - Gestión de Baterías 4.9.7</title>
+    <title>PowerManager Pro - Gestión de Baterías 4.9.8</title>
     
     <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -948,13 +948,21 @@
 
         function renderDashboard(c) {
             const total = batteries.length;
-            const counts = { 'En Uso':0, 'Cargando':0, 'En Reposo':0, 'Mantenimiento':0 };
+            const counts = { 'En Reposo': 0, 'Cargada': 0, 'En Carga': 0, 'Fuera de Servicio': 0 };
+
             batteries.forEach(b => {
-                const st = b.estado;
-                if(st === 'En Uso') counts['En Uso']++;
-                else if(st === 'Cargando') counts['Cargando']++;
-                else if(st === 'Mantenimiento') counts['Mantenimiento']++;
-                else counts['En Reposo']++;
+                const st = (b.estado || '').toLowerCase();
+                
+                if (st.includes('cargada')) {
+                    counts['Cargada']++;
+                } else if (st.includes('carga') && !st.includes('cargada')) { // "En Carga" or "Cargando"
+                    counts['En Carga']++;
+                } else if (st.includes('servicio') || st.includes('mantenimiento') || st.includes('falla')) {
+                    counts['Fuera de Servicio']++;
+                } else {
+                    // Default to Reposo (Blue) which also covers "En Uso" based on previous logic sharing Blue
+                    counts['En Reposo']++;
+                }
             });
 
             const totalCiclos = batteries.reduce((acc, b) => acc + (Number(b.ciclos_mes) || 0), 0);
@@ -996,7 +1004,14 @@
             
             charts['estados'] = new Chart(document.getElementById('chart-estados'), { 
                 type: 'doughnut', 
-                data: { labels: Object.keys(counts), datasets: [{ label: 'Baterías', data: Object.values(counts), backgroundColor: ['#3b82f6', '#22c55e', '#e5e7eb', '#ef4444'] }] }, 
+                data: { 
+                    labels: Object.keys(counts), 
+                    datasets: [{ 
+                        label: 'Baterías', 
+                        data: Object.values(counts), 
+                        backgroundColor: ['#3b82f6', '#22c55e', '#f97316', '#ef4444'] 
+                    }] 
+                }, 
                 options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}} 
             });
 
