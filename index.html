@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerManager Pro - Gestión de Baterías 4.6</title>
+    <title>PowerManager Pro - Gestión de Baterías 4.9.5</title>
     
     <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,8 +18,8 @@
         .slide-in-right { animation: slideInRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .hidden { display: none !important; }
-        .table-header { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
-        .table-cell { padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #374151; }
+        .table-header { padding: 0.75rem 1.0rem; text-align: left; font-size: 0.70rem; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; }
+        .table-cell { padding: 0.75rem 1.0rem; white-space: nowrap; font-size: 0.85rem; color: #1f2937; }
         .login-bg {
             background-image: linear-gradient(rgba(30, 58, 138, 0.9), rgba(30, 58, 138, 0.8)), url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover; background-position: center;
@@ -36,6 +36,10 @@
         .badge-rojo { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Falla / Mantenimiento */
         .badge-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; } /* Cargando / Operativo */
         .badge-amarillo { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Reposo / Alerta */
+        
+        /* Badges Historial */
+        .tag-op { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .tag-mant { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden">
@@ -105,7 +109,6 @@
                         <div id="alarm-indicator" class="hidden flex items-center bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 animate-pulse cursor-pointer" onclick="window.switchView('mantencion'); window.switchMaintenanceView('cargadores');">
                             <i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i> <span id="alarm-count">0</span> Alertas
                         </div>
-                        <!-- DATOS DE USUARIO CORREGIDOS -->
                         <div class="text-right mr-2 cursor-pointer hover:opacity-80" onclick="window.openProfileModal()">
                             <p class="font-bold text-gray-900 text-sm flex items-center justify-end gap-2"><span id="user-display-name">Usuario</span> <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400"></i></p>
                             <div class="flex items-center justify-end gap-1 text-xs mt-0.5">
@@ -210,9 +213,10 @@
                 </div>
                 
                 <div class="flex justify-between pt-4 border-t items-center">
-                    <button type="button" id="btn-delete-report" onclick="deleteCurrentReport()" class="hidden text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar</button>
+                    <!-- BOTÓN ELIMINAR CORREGIDO -->
+                    <button type="button" id="btn-delete-report" onclick="deleteCurrentReport()" class="text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1 bg-red-50 border border-red-200 px-3 py-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Registro</button>
                     <div class="flex gap-3 ml-auto">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button>
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded text-gray-700 font-bold">Cancelar</button>
                         <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow-md">Guardar</button>
                     </div>
                 </div>
@@ -342,7 +346,7 @@
 
     <!-- Modales Adicionales (Registro Agua, Seguridad, Hidratación Rápida) -->
     
-    <!-- Modal Búsqueda Hidratación (Antiguo) -->
+    <!-- Modal Búsqueda Hidratación (Antiguo - Restaurado) -->
     <div id="hydration-modal" class="fixed inset-0 bg-indigo-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-bounce-in">
             <div class="p-5 border-b bg-blue-50 rounded-t-2xl flex justify-between items-center">
@@ -455,9 +459,11 @@
             if (!isDemoMode) {
                 // Suscripciones en tiempo real
                 supabaseClient.channel('users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { if(state.currentView === 'usuarios') fetchData(); }).subscribe();
+                
+                // NOTA: RenderApp se llama aquí para refrescar la UI automáticamente
                 supabaseClient.channel('bats').on('postgres_changes', { event: '*', schema: 'public', table: 'reportes_mensuales' }, (p) => { handleRealtime(p, batteries); renderApp(); }).subscribe();
                 supabaseClient.channel('chgs').on('postgres_changes', { event: '*', schema: 'public', table: 'charger_inventory' }, (p) => { handleRealtime(p, chargers); renderApp(); }).subscribe();
-                supabaseClient.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { if(p.eventType === 'INSERT') bitacora.unshift(p.new); if(state.currentView === 'bitacora') renderBitacora(document.getElementById('app-content')); }).subscribe();
+                supabaseClient.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { if(p.eventType === 'INSERT') bitacora.unshift(p.new); if(state.currentView === 'bitacora' || state.currentView === 'historial') renderApp(); }).subscribe();
                 supabaseClient.channel('equipos').on('postgres_changes', { event: '*', schema: 'public', table: 'equipos' }, (p) => { handleRealtime(p, equipos); }).subscribe();
 
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -486,7 +492,6 @@
             document.getElementById('user-display-name').innerText = userData?.nombre || user.email;
             document.getElementById('user-display-role').innerText = userRole;
             
-            // CORREGIDO: Lógica de turno más robusta
             const now = new Date();
             const h = now.getHours();
             let shift = 'Turno A';
@@ -504,7 +509,6 @@
                 document.getElementById('user-display-role').className = "text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200";
             }
 
-            // Restore state from local storage (PERSISTENCIA)
             const lastView = localStorage.getItem('pm_lastView') || 'dashboard';
             const lastMaint = localStorage.getItem('pm_lastMaintView') || 'baterias';
             
@@ -518,12 +522,12 @@
 
         async function fetchData() {
             if (!isDemoMode) {
-                const { data: b } = await supabaseClient.from('reportes_mensuales').select('*'); if(b) batteries = b;
+                const { data: b } = await supabaseClient.from('reportes_mensuales').select('*').order('created_at', { ascending: true }); 
+                if(b) batteries = b;
                 const { data: c } = await supabaseClient.from('charger_inventory').select('*'); if(c) chargers = c.sort((a,b)=>a.codigo>b.codigo?1:-1);
                 const { data: log } = await supabaseClient.from('bitacora_operaciones').select('*').order('created_at', {ascending: false}).limit(50); if(log) bitacora = log;
                 const { data: eq } = await supabaseClient.from('equipos').select('*'); if(eq) equipos = eq;
                 
-                // CARGAR USUARIOS SI ES ADMIN
                 if (userRole === 'Administrador') {
                     const { data: u } = await supabaseClient.from('users').select('*');
                     if (u) localUsers = u;
@@ -535,26 +539,24 @@
         function handleRealtime(p, list) {
             if (p.eventType === 'INSERT') list.push(p.new);
             if (p.eventType === 'UPDATE') { const i = list.findIndex(x => x.id === p.new.id); if(i!==-1) list[i] = p.new; }
-            if (p.eventType === 'DELETE') { const i = list.findIndex(x => x.old.id); if(i!==-1) list.splice(i, 1); }
+            if (p.eventType === 'DELETE') { 
+                const deletedId = p.old ? p.old.id : (p.payload ? p.payload.id : null);
+                if (deletedId) {
+                    const i = list.findIndex(x => x.id === deletedId); 
+                    if(i!==-1) list.splice(i, 1); 
+                }
+            }
         }
 
         // --- MANEJO DE FORMULARIOS ---
-        // Login Handler Refinado (CORREGIDO PARA EVITAR RECARGA)
         document.getElementById('login-form').addEventListener('submit', async (e) => { 
             e.preventDefault(); 
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
-            
             try { 
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: pass });
-                if (error) {
-                    alert("Error al ingresar: " + error.message);
-                } else {
-                    console.log("Login OK");
-                }
-            } catch(err){ 
-                alert("Error de conexión: " + err.message); 
-            } 
+                if (error) alert("Error al ingresar: " + error.message); else console.log("Login OK");
+            } catch(err){ alert("Error de conexión: " + err.message); } 
         });
 
         document.getElementById('register-form').addEventListener('submit', async (e) => { e.preventDefault(); try { const {data, error} = await supabaseClient.auth.signUp({ email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value }); if(error) throw error; if(data.user) { await supabaseClient.from('users').insert([{ id: data.user.id, email: document.getElementById('reg-email').value, role: document.getElementById('reg-role').value, nombre: document.getElementById('reg-name').value }]); alert("Creado."); location.reload(); } } catch(err){ alert(err.message); } });
@@ -564,26 +566,21 @@
             const serial = e.target.value.toUpperCase().trim();
             const eq = document.getElementById('form-equipoAsignado');
             
-            // 1. Caso: Ingresa "OP-134A" o "G-351B" (Con prefijo explícito)
             const explicitMatch = serial.match(/^(OP|G|T)[-\s]?(\d+)[ABC]$/); 
             if (explicitMatch) {
-                const prefix = explicitMatch[1]; // OP o G
-                const num = explicitMatch[2];    // 134
+                const prefix = explicitMatch[1]; 
+                const num = explicitMatch[2];    
                 eq.value = `${prefix}-${num}`;
                 highlightInput(eq);
                 return;
             }
 
-            // 2. Caso: Ingresa solo "134A" (Sin prefijo, usa lógica de rangos)
             const numberMatch = serial.match(/^(\d+)[ABC]$/);
             if (numberMatch) {
                 const num = parseInt(numberMatch[1]);
-                
-                // Lógica de rangos definida
-                if (num >= 100 && num <= 200) { // Rango OP (Ajustado aprox 103-145)
+                if (num >= 100 && num <= 200) { // Rango OP
                     eq.value = `OP-${num}`;
                 } else {
-                    // Por defecto asume Grúa (G) si no es rango OP, o rango 300+
                     eq.value = `G-${num}`;
                 }
                 highlightInput(eq);
@@ -595,9 +592,6 @@
             setTimeout(() => el.classList.remove('bg-green-50', 'text-green-700'), 500);
         }
 
-        // ============================================
-        // LÓGICA DE BITÁCORA (NUEVA VERSIÓN)
-        // ============================================
         window.openBitacoraModal = () => {
             setupModal('Bitácora', 'bitacora-form');
             const now = new Date();
@@ -623,7 +617,7 @@
             if (selectedEquipo) {
                 panel.classList.remove('hidden');
                 displayAnterior.innerText = selectedEquipo.horometro_actual;
-                inputNuevo.value = ''; // Limpiar para ingreso
+                inputNuevo.value = ''; 
                 inputNuevo.focus();
                 calcularDiferencia();
             } else {
@@ -656,7 +650,7 @@
                 const anterior = Number(selectedEquipo.horometro_actual) || 0;
                 if (nuevoHorometro < anterior) {
                     if (!confirm(`⚠️ ALERTA: El horómetro nuevo (${nuevoHorometro}) es MENOR al anterior (${anterior}).\n\n¿Estás seguro de guardar este dato?`)) {
-                        return; // Cancelar guardado
+                        return; 
                     }
                 }
                 horasTrabajadas = nuevoHorometro - anterior;
@@ -692,9 +686,8 @@
                 closeModal();
             } catch(err) { alert(err.message); }
         });
-        // ============================================
 
-        // NUEVO: Funcionalidad Hidratación Rápida
+        // NUEVO: Funcionalidad Hidratación Rápida con INSERCIÓN DE NUEVO REGISTRO
         window.openHydroModal = (id, serial) => {
             document.getElementById('hydro-id').value = id;
             document.getElementById('hydro-display-serial').innerText = serial;
@@ -709,25 +702,31 @@
             const litros = Number(document.getElementById('hydro-litros').value);
             
             try {
-                // Solo actualiza litros_agua y la fecha, sin tocar el resto
-                const { error } = await supabaseClient.from('reportes_mensuales')
-                    .update({ 
-                        litros_agua: litros, 
-                        fecha_registro: new Date() 
-                    })
-                    .eq('id', id);
+                // 1. Obtener datos actuales de la batería
+                const existingBattery = batteries.find(b => b.id === id);
+                if (!existingBattery) throw new Error("Batería no encontrada");
+
+                // 2. Crear nuevo objeto clonando el anterior
+                const newRecord = {
+                    ...existingBattery,
+                    id: undefined, // Eliminar ID para que se genere uno nuevo
+                    litros_agua: litros,
+                    fecha_registro: new Date()
+                };
+
+                // 3. Insertar como NUEVO registro (Historial)
+                const { error } = await supabaseClient.from('reportes_mensuales').insert([newRecord]);
                 
                 if (error) throw error;
                 
-                triggerAlarm('Hidratación', 'Registro actualizado', 'success');
+                triggerAlarm('Hidratación', 'Nuevo registro histórico creado', 'success');
                 document.getElementById('hydro-modal').classList.add('hidden');
-                // Realtime actualizará la UI automáticamente
+                // Realtime actualizará la UI
             } catch (err) {
                 alert(err.message);
             }
         });
 
-        // Guardar Batería
         document.getElementById('battery-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const numSafe = (id) => { const val = document.getElementById(id).value; return val === '' ? null : Number(val); };
@@ -742,14 +741,24 @@
             await handleSave('reportes_mensuales', d, state.modalMode, 'form-id');
         });
 
-        // Guardar Cargador
         document.getElementById('charger-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const d = { codigo: val('charger-codigo'), seriecargador: val('charger-serial'), tipo: val('charger-tipo'), estado: val('charger-estado'), ubicacion: val('charger-ubicacion'), observaciones: val('charger-observaciones'), amperaje: num('charger-amperaje'), estado_asas: val('charger-asas'), estado_conector: val('charger-conector'), estado_led: val('charger-led'), };
+            const d = { 
+                codigo: val('charger-codigo'), 
+                seriecargador: val('charger-serial'), 
+                tipo: val('charger-tipo'), 
+                estado: val('charger-estado'), 
+                ubicacion: val('charger-ubicacion'), 
+                observaciones: val('charger-observaciones'), 
+                amperaje: num('charger-amperaje'), 
+                estado_asas: val('charger-asas'), 
+                estado_conector: val('charger-conector'), 
+                estado_led: val('charger-led'),
+                updated_at: new Date() // GUARDA LA FECHA DE ACTUALIZACIÓN
+            };
             await handleSave('charger_inventory', d, state.modalMode, 'charger-id');
         });
 
-        // Crear Usuario Admin (CORREGIDO)
         document.getElementById('admin-user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('admin-reg-email').value;
@@ -772,7 +781,7 @@
             } catch (err) { alert("Error: " + err.message); }
         });
 
-        // HIDRATACIÓN RÁPIDA (Búsqueda)
+        // --- FUNCIONES RESTAURADAS PARA MODAL DE BÚSQUEDA MANUAL ---
         window.openHydrationModal = () => {
             document.getElementById('hydration-modal').classList.remove('hidden');
             document.getElementById('hydration-form').reset();
@@ -780,6 +789,7 @@
             document.getElementById('hydro-fecha').value = now.toISOString().slice(0,16);
             document.getElementById('hydro-serial').focus();
         };
+
         window.detectarBateria = (val) => {
             const found = batteries.find(b => b.numero_serie.toLowerCase() === val.toLowerCase());
             const info = document.getElementById('hydro-info');
@@ -793,16 +803,45 @@
             }
             lucide.createIcons();
         };
+
         document.getElementById('hydration-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const serial = document.getElementById('hydro-serial').value;
-            const bat = batteries.find(b => b.numero_serie.toLowerCase() === serial.toLowerCase());
+            
+            // MODIFICADO: Buscar el más reciente en la lista ordenada
+            const candidates = batteries.filter(b => b.numero_serie.toLowerCase() === serial.toLowerCase());
+            // Como batteries ya viene ordenado ASC, el último es el más nuevo
+            const latestBat = candidates.length > 0 ? candidates[candidates.length - 1] : null;
+            
             const fechaInput = document.getElementById('hydro-fecha').value;
             const updates = { litros_agua: num('hydro-agua'), temperatura_max: num('hydro-temp'), fecha_registro: new Date(fechaInput) };
-            if (bat) { const { error } = await supabaseClient.from('reportes_mensuales').update(updates).eq('id', bat.id); if(error) alert(error.message); else triggerAlarm('Actualizado', `Batería ${serial} actualizada`, 'success'); } 
-            else { const nuevaData = { ...updates, numero_serie: serial, voltaje: '48V', estado: 'Cargando', tipo_equipo: 'Sin Marca', capacidad_ah: 0, ciclos_mes: 0, equipo_asignado: serial.match(/^(\d+)[ABC]$/) ? 'G' + serial.match(/^(\d+)[ABC]$/)[1] : null }; const { error } = await supabaseClient.from('reportes_mensuales').insert([nuevaData]); if(error) alert(error.message); else triggerAlarm('Creada', `Batería ${serial} registrada por primera vez.`, 'success'); }
-            document.getElementById('hydration-modal').classList.add('hidden'); fetchData();
+            
+            try {
+                if (latestBat) { 
+                    // INSERTAR NUEVO REGISTRO HISTÓRICO
+                    const newRecord = { ...latestBat };
+                    delete newRecord.id;
+                    delete newRecord.created_at;
+                    newRecord.litros_agua = updates.litros_agua;
+                    newRecord.temperatura_max = updates.temperatura_max;
+                    newRecord.fecha_registro = updates.fecha_registro;
+
+                    const { error } = await supabaseClient.from('reportes_mensuales').insert([newRecord]);
+                    if(error) throw error;
+                    triggerAlarm('Registrado', `Historial actualizado para ${serial}`, 'success'); 
+                } else { 
+                    // Crear nuevo
+                    const nuevaData = { ...updates, numero_serie: serial, voltaje: '48V', estado: 'Cargando', tipo_equipo: 'Sin Marca', capacidad_ah: 0, ciclos_mes: 0, equipo_asignado: serial.match(/^(\d+)[ABC]$/) ? 'G' + serial.match(/^(\d+)[ABC]$/)[1] : null }; 
+                    const { error } = await supabaseClient.from('reportes_mensuales').insert([nuevaData]); 
+                    if(error) throw error;
+                    triggerAlarm('Creada', `Batería ${serial} registrada por primera vez.`, 'success'); 
+                }
+                document.getElementById('hydration-modal').classList.add('hidden'); 
+            } catch(err) {
+                alert(err.message);
+            }
         });
+        // -------------------------------------------------------------
 
         async function handleSave(table, data, mode, idField) {
             try {
@@ -812,22 +851,46 @@
             } catch(e) { alert(e.message); }
         }
 
+        // --- SOLUCIÓN FINAL PROBLEMA DE BORRADO ---
         window.deleteCurrentReport = async () => {
             const id = document.getElementById('form-id').value;
-            if(!confirm("¿Eliminar registro?")) return;
-            await supabaseClient.from('reportes_mensuales').delete().eq('id', id);
-            closeModal();
+            const btn = document.getElementById('btn-delete-report');
+            
+            if(!id) return alert("Error: No se encontró ID para eliminar.");
+            if(!confirm("⚠️ ¿Estás seguro de eliminar este registro permanentemente?")) return;
+            
+            // Feedback visual inmediato
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Eliminando...`;
+            btn.disabled = true;
+
+            try {
+                // Intento de borrado
+                const { error } = await supabaseClient.from('reportes_mensuales').delete().eq('id', id);
+                
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                // ÉXITO: Actualización local forzada y limpieza
+                batteries = batteries.filter(b => b.id != id); 
+                renderApp(); 
+                closeModal();
+                triggerAlarm('Eliminado', 'Registro eliminado correctamente', 'success');
+
+            } catch (err) {
+                alert("Error al eliminar: " + err.message + "\n\n(Verifica si tienes permisos de Administrador)");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         };
 
         window.deleteUser = async (id) => {
             if(!confirm("¿Eliminar usuario?")) return;
-            // Solo borra de la tabla pública, la autenticación de Supabase requiere API backend para borrar usuarios auth real.
-            // Para este prototipo, borramos el registro de acceso.
             await supabaseClient.from('users').delete().eq('id', id);
             fetchData();
         };
 
-        // --- RENDER ---
         window.switchView = (v) => {
             state.currentView = v;
             localStorage.setItem('pm_lastView', v);
@@ -847,22 +910,18 @@
 
         function renderApp() {
             const c = document.getElementById('app-content');
-            // NO limpiar innerHTML aquí para vistas que mantienen estado (input focus)
-            
             if(Object.keys(charts).length > 0 && state.currentView !== 'dashboard' && state.currentView !== 'mantencion') {
                 Object.values(charts).forEach(x => x.destroy()); charts = {};
             }
-
             if(state.currentView === 'dashboard') { c.innerHTML = ''; renderDashboard(c); }
-            else if(state.currentView === 'inventario') renderInventory(c); // Render inteligente
+            else if(state.currentView === 'inventario') renderInventory(c); 
             else if(state.currentView === 'bitacora') { c.innerHTML = ''; renderBitacora(c); }
-            else if(state.currentView === 'mantencion') renderMaintenance(c); // Render inteligente
+            else if(state.currentView === 'mantencion') renderMaintenance(c); 
             else if(state.currentView === 'usuarios') { c.innerHTML = ''; renderAdminUsers(c); }
             else if(state.currentView === 'historial') { c.innerHTML = ''; renderHistory(c); }
             lucide.createIcons();
         }
 
-        // Render functions (Dashboard, Inventory, Maintenance, etc.) remain largely the same, just ensuring correct data binding
         function renderDashboard(c) {
             const total = batteries.length;
             const counts = { 'En Uso':0, 'Cargando':0, 'En Reposo':0, 'Mantenimiento':0 };
@@ -878,8 +937,6 @@
             const ciclosProm = total > 0 ? Math.round(totalCiclos / total) : 0;
             const soh = total > 0 ? (100 - (ciclosProm * 0.05)).toFixed(1) : 100;
             const tempMax = batteries.reduce((max, b) => Math.max(max, (Number(b.temperatura_max)||0)), 0);
-
-            // Preparar datos para gráfico de barras (Top 10 Ciclos)
             const topBats = [...batteries].sort((a,b) => (b.ciclos_mes||0) - (a.ciclos_mes||0)).slice(0,10);
 
             const summaryHTML = `
@@ -931,9 +988,17 @@
 
         function renderSummaryCard(title, value, icon, colorClass) { return `<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition"><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${title}</p><h3 class="text-3xl font-bold text-gray-800">${value}</h3></div><div class="${colorClass} w-12 h-12 rounded-xl flex items-center justify-center"><i data-lucide="${icon}" class="w-6 h-6"></i></div></div>`; }
         
-        // --- INVENTARIO CORREGIDO (NO PIERDE FOCO) ---
+        // --- FUNCIÓN DE AGRUPACIÓN (VISTA MAESTRA) ---
+        function getUniqueBatteries() {
+            // Como batteries ya viene ordenado ASC por fecha, el último que procesemos será el más reciente
+            const map = new Map();
+            batteries.forEach(b => {
+                map.set(b.numero_serie, b); // Sobrescribe siempre, quedando el último (más nuevo)
+            });
+            return Array.from(map.values());
+        }
+
         function renderInventory(c) {
-            // Verificar si el layout ya existe para no borrar el input
             if(!document.getElementById('inventory-layout')) {
                 c.innerHTML = `
                 <div id="inventory-layout">
@@ -951,13 +1016,18 @@
                         </table>
                     </div>
                 </div>`;
-                // Restaurar foco si existe
                 const inp = document.getElementById('inv-search');
                 if(inp) { inp.value = state.searchTerm; inp.focus(); }
             }
 
             const term = state.searchTerm.toLowerCase();
-            const filtered = batteries.filter(b => (b.numero_serie||'').toLowerCase().includes(term));
+            const uniqueBatteries = getUniqueBatteries();
+            
+            // Filtrar y luego ORDENAR DESCENDENTE para mostrar lo más nuevo primero
+            const filtered = uniqueBatteries
+                .filter(b => (b.numero_serie||'').toLowerCase().includes(term))
+                .sort((a,b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
+
             let rows = filtered.map(b => {
                 const st = (b.estado || '').toLowerCase();
                 let statusClass = 'bg-gray-100 text-gray-800'; 
@@ -1012,12 +1082,10 @@
             c.innerHTML = `<div class="flex justify-between items-center mb-6"><div><h2 class="text-xl font-bold text-gray-800">Bitácora de Operaciones</h2><p class="text-sm text-gray-500">Registro histórico de movimientos y horómetros.</p></div><button onclick="window.openBitacoraModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="calculator" class="w-4 h-4"></i> Registro Automático</button></div><div class="bg-white rounded-xl shadow border overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="table-header">Fecha/Hora</th><th class="table-header">Equipo</th><th class="table-header">Horómetro Total</th><th class="table-header">Movimiento Batería</th><th class="table-header text-center">Turno</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         }
 
-        // --- MANTENCIÓN CORREGIDO (NO PIERDE FOCO) ---
         function renderMaintenance(c) {
             const isBat = state.maintenanceView === 'baterias';
             const btnClass = (active) => `px-6 py-3 text-sm font-bold ${active ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-800'}`;
             
-            // Layout Base
             if (!document.getElementById('maint-layout')) {
                 c.innerHTML = `
                 <div id="maint-layout">
@@ -1030,21 +1098,32 @@
                 </div>`;
             }
             
-            // Actualizar clases botones
             document.getElementById('btn-maint-bat').className = btnClass(isBat);
             document.getElementById('btn-maint-chg').className = btnClass(!isBat);
             
             const content = document.getElementById('maint-content');
             
             if (isBat) {
-                // Render Baterías (Agua)
                 const term = state.maintenanceSearch ? state.maintenanceSearch.toLowerCase() : '';
-                const filteredBats = batteries.filter(b => (b.numero_serie||'').toLowerCase().includes(term));
+                const uniqueBatteries = getUniqueBatteries();
+                
+                // Filtrar y luego ORDENAR DESCENDENTE para mostrar lo más nuevo primero
+                const filteredBats = uniqueBatteries
+                    .filter(b => (b.numero_serie||'').toLowerCase().includes(term))
+                    .sort((a,b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
+
                 const topWater = [...filteredBats].sort((a,b)=>(Number(b.litros_agua)||0)-(Number(a.litros_agua)||0)).slice(0,10);
                 
-                const rows = filteredBats.map(b => `<tr class="hover:bg-gray-50 border-b"><td class="table-cell font-bold text-gray-700">${b.numero_serie||'-'}</td><td class="table-cell">${b.ultimaAgua||'-'}</td><td class="table-cell"><span class="font-bold text-blue-600">${b.litros_agua||0} L</span></td><td class="table-cell text-right"><button onclick="window.openEditModal('${b.id}')" class="text-indigo-600 font-bold hover:underline">Detalles</button></td></tr>`).join('');
+                const rows = filteredBats.map(b => {
+                    const d = b.fecha_registro ? new Date(b.fecha_registro).toLocaleDateString('es-CL') : '-';
+                    return `<tr class="hover:bg-gray-50 border-b">
+                        <td class="table-cell font-bold text-gray-700">${b.numero_serie||'-'}</td>
+                        <td class="table-cell">${d}</td>
+                        <td class="table-cell"><span class="font-bold text-blue-600">${b.litros_agua||0} L</span></td>
+                        <td class="table-cell text-right"><button onclick="window.openEditModal('${b.id}')" class="text-indigo-600 font-bold hover:underline">Detalles</button></td>
+                    </tr>`;
+                }).join('');
                 
-                // Solo reconstruir si cambió la vista o es primera vez
                 if(!document.getElementById('maint-bat-view')) {
                     content.innerHTML = `
                     <div id="maint-bat-view">
@@ -1061,48 +1140,112 @@
                     setTimeout(() => { const ctx = document.getElementById('chart-water'); if (ctx) charts['water'] = new Chart(ctx, { type: 'bar', data: { labels: topWater.map(b=>b.numero_serie), datasets: [{ label: 'Agua (cc)', data: topWater.map(b=>b.litros_agua||0), backgroundColor: '#3B82F6' }] }, options: {responsive:true, maintainAspectRatio:false} }); }, 0);
                 }
                 
-                // Actualizar solo tabla y chart
                 document.getElementById('maint-bat-body').innerHTML = rows;
                 const inp = document.getElementById('maint-search'); if(inp) { inp.value = state.maintenanceSearch; inp.focus(); }
 
             } else {
-                // Render Cargadores
                 const cards = chargers.map(ch => {
                     let borderClass = 'border-l-gray-400'; let badgeClass = 'bg-gray-100 text-gray-800';
                     const st = String(ch.estado).trim().toLowerCase();
                     if (st === 'operativo') { borderClass = 'border-l-green-500'; badgeClass = 'bg-green-100 text-green-800'; } 
                     else if (st === 'con defectos') { borderClass = 'border-l-yellow-500'; badgeClass = 'bg-yellow-100 text-yellow-800'; } 
                     else if (st === 'fuera de servicio') { borderClass = 'border-l-red-500'; badgeClass = 'bg-red-100 text-red-800'; }
-                    return `<div class="bg-white p-5 rounded-xl shadow border-l-4 ${borderClass} hover:shadow-md transition"><div class="flex justify-between mb-3"><h4 class="font-bold text-xl text-gray-800">${ch.codigo}</h4><span class="px-3 py-1 rounded-full text-xs ${badgeClass} font-bold capitalize">${ch.estado}</span></div><p class="text-xs text-gray-500 mb-4 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${ch.ubicacion||'Sin ubicación'}</p><div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100"><span class="text-xs font-mono text-gray-400">${ch.amperaje ? ch.amperaje+'A' : '-'}</span><button onclick="window.openChargerModal('${ch.id}')" class="w-full bg-gray-50 hover:bg-gray-100 py-2 rounded text-xs font-bold text-gray-700 transition">Gestionar</button></div></div>`;
+                    
+                    // --- NUEVO: Indicador de actualización (simulado) ---
+                    const updatedText = ch.updated_at ? new Date(ch.updated_at).toLocaleDateString() : 'Hoy';
+
+                    return `<div class="bg-white p-5 rounded-xl shadow border-l-4 ${borderClass} hover:shadow-md transition">
+                        <div class="flex justify-between mb-3"><h4 class="font-bold text-xl text-gray-800">${ch.codigo}</h4><span class="px-3 py-1 rounded-full text-xs ${badgeClass} font-bold capitalize">${ch.estado}</span></div>
+                        <p class="text-xs text-gray-500 mb-4 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${ch.ubicacion||'Sin ubicación'}</p>
+                        <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                            <div class="text-xs text-gray-400 flex flex-col">
+                                <span class="font-mono">${ch.amperaje ? ch.amperaje+'A' : '-'}</span>
+                                <span class="text-[10px] mt-0.5">Act: ${updatedText}</span>
+                            </div>
+                            <button onclick="window.openChargerModal('${ch.id}')" class="w-20 bg-gray-50 hover:bg-gray-100 py-2 rounded text-xs font-bold text-gray-700 transition">Gestionar</button>
+                        </div>
+                    </div>`;
                 }).join('');
                 content.innerHTML = `<div class="flex justify-between items-center mb-6"><h3 class="font-bold text-xl text-gray-700">Infraestructura</h3><button onclick="window.openCreateChargerModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 flex items-center gap-2 text-sm font-bold"><i data-lucide="plus" class="w-4 h-4"></i> Nuevo Cargador</button></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">${cards}</div>`;
             }
         }
 
-        // --- HISTORIAL CON EDICIÓN (SOLO ADMIN) ---
+        // --- HISTORIAL GLOBAL UNIFICADO (NUEVA VERSIÓN POTENTE) ---
         function renderHistory(c) {
             c.innerHTML = `<div class="text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-indigo-600"></i></div>`;
             
-            const rows = bitacora.map(item => { // Usando datos reales de bitácora
-                const d = new Date(item.fecha || item.created_at);
-                const deleteBtn = userRole === 'Administrador' ? `<button onclick="deleteBitacoraItem('${item.id}')" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
-                return `<tr class="border-b hover:bg-gray-50">
-                    <td class="table-cell">${d.toLocaleDateString('es-CL')} ${d.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'})}</td>
-                    <td class="table-cell font-bold uppercase">${item.equipo_id || '-'}</td>
+            // 1. COMBINAR DOS FUENTES DE DATOS: Bitacora (Operaciones) + Batteries (Mantenciones)
+            const combinedHistory = [
+                ...bitacora.map(b => ({
+                    type: 'Operación',
+                    date: new Date(b.fecha || b.created_at),
+                    main_id: b.equipo_id || 'S/N', // Equipo
+                    sub_id: b.bateria_serie || '-', // Batería
+                    metric: `${b.horometro} Hrs`,
+                    detail: b.bateria_saliente ? `Sale: ${b.bateria_saliente}` : 'Ingreso',
+                    water: '-',
+                    temp: '-',
+                    instance: b.horas_trabajadas ? `+${b.horas_trabajadas}h` : '-',
+                    id: b.id,
+                    raw: b,
+                    is_op: true
+                })),
+                ...batteries.map(b => ({
+                    type: 'Mantención',
+                    date: new Date(b.fecha_registro || b.created_at),
+                    main_id: b.numero_serie, // Batería (En mantención el protagonista es la batería)
+                    sub_id: b.ubicacion_sala || '-', // Ubicación
+                    metric: '-',
+                    detail: b.estado,
+                    water: b.litros_agua ? `${b.litros_agua} L` : '-',
+                    temp: b.temperatura_max ? `${b.temperatura_max}°C` : '-',
+                    instance: b.ciclos_mes ? `${b.ciclos_mes} Ciclos` : '-',
+                    id: b.id,
+                    raw: b,
+                    is_op: false
+                }))
+            ].sort((a,b) => b.date - a.date); // Ordenar por fecha descendente (más reciente arriba)
+
+            const rows = combinedHistory.map(item => {
+                const dateStr = item.date.toLocaleDateString('es-CL');
+                const timeStr = item.date.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+                const deleteBtn = userRole === 'Administrador' ? 
+                    `<button onclick="${item.is_op ? `deleteBitacoraItem('${item.id}')` : `deleteBatteryHistoryItem('${item.id}')`}" class="text-red-400 hover:text-red-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
+
+                return `<tr class="border-b hover:bg-gray-50 transition">
                     <td class="table-cell">
-                        ${item.bateria_serie ? `<span class="text-green-600 font-bold text-xs">Entra: ${item.bateria_serie}</span>` : ''}
-                        ${item.bateria_saliente ? `<br><span class="text-red-600 font-bold text-xs">Sale: ${item.bateria_saliente}</span>` : ''}
+                        <div class="font-bold text-gray-800">${dateStr}</div>
+                        <div class="text-xs text-gray-500">${timeStr}</div>
                     </td>
-                    <td class="table-cell font-mono">${item.horometro || 0} (+${item.horas_trabajadas || 0})</td>
+                    <td class="table-cell">
+                        <span class="${item.is_op ? 'tag-op' : 'tag-mant'}">${item.type}</span>
+                    </td>
+                    <td class="table-cell">
+                        <div class="font-bold text-gray-700">${item.main_id}</div>
+                        <div class="text-xs text-gray-500">${item.sub_id}</div>
+                    </td>
+                    <td class="table-cell text-center font-mono text-xs text-gray-600">${item.water}</td>
+                    <td class="table-cell text-center font-mono text-xs text-gray-600">${item.temp}</td>
+                    <td class="table-cell text-center font-bold text-indigo-600 text-xs">${item.instance}</td>
                     <td class="table-cell text-right">${deleteBtn}</td>
                 </tr>`;
             }).join('');
 
             c.innerHTML = `
-            <div class="flex justify-between items-center mb-6"><div><h2 class="text-2xl font-bold text-gray-800">Historial Global</h2><p class="text-sm text-gray-500">Registro histórico completo.</p></div></div>
+            <div class="flex justify-between items-center mb-6"><div><h2 class="text-2xl font-bold text-gray-800">Historial Global Unificado</h2><p class="text-sm text-gray-500">Registro completo de operaciones y mantenciones.</p></div></div>
             <div class="bg-white rounded-xl shadow border overflow-hidden">
                 <table class="w-full">
-                    <thead class="bg-gray-100 border-b border-gray-200"><tr><th class="table-header">Fecha</th><th class="table-header">Equipo</th><th class="table-header">Movimientos</th><th class="table-header">Horómetro</th><th class="table-header text-right">Acción</th></tr></thead>
+                    <thead class="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                            <th class="table-header">Fecha</th>
+                            <th class="table-header">Tipo</th>
+                            <th class="table-header">ID Principal / Sec</th>
+                            <th class="table-header text-center">Agua</th>
+                            <th class="table-header text-center">Temp</th>
+                            <th class="table-header text-center">Instancia</th>
+                            <th class="table-header text-right">Acción</th>
+                        </tr>
+                    </thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>`;
@@ -1110,14 +1253,20 @@
         }
 
         window.deleteBitacoraItem = async (id) => {
-            if(!confirm("¿Eliminar registro histórico? Esto no afectará los horómetros actuales.")) return;
+            if(!confirm("¿Eliminar registro operativo?")) return;
             await supabaseClient.from('bitacora_operaciones').delete().eq('id', id);
-            // Recargar localmente
             bitacora = bitacora.filter(b => b.id !== id);
             renderApp();
         };
 
-        // --- USUARIOS (SOLO ADMIN - VISIBLE Y LIMPIO) ---
+        // Nueva función para borrar historial de mantención desde la tabla global
+        window.deleteBatteryHistoryItem = async (id) => {
+            if(!confirm("¿Eliminar registro de mantención histórico?")) return;
+            await supabaseClient.from('reportes_mensuales').delete().eq('id', id);
+            batteries = batteries.filter(b => b.id !== id);
+            renderApp();
+        };
+
         function renderAdminUsers(c) {
             if (userRole !== 'Administrador') return c.innerHTML = `<div class="p-10 text-center text-red-600 font-bold">⛔ Acceso Denegado</div>`;
             
