@@ -831,43 +831,63 @@
             lucide.createIcons();
         };
 
-        document.getElementById('hydration-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const serial = document.getElementById('hydro-serial').value;
-            
-            // MODIFICADO: Buscar el más reciente en la lista ordenada
-            const candidates = batteries.filter(b => b.numero_serie.toLowerCase() === serial.toLowerCase());
-            // Como batteries ya viene ordenado ASC, el último es el más nuevo
-            const latestBat = candidates.length > 0 ? candidates[candidates.length - 1] : null;
-            
-            const fechaInput = document.getElementById('hydro-fecha').value;
-            const updates = { litros_agua: num('hydro-agua'), temperatura_max: num('hydro-temp'), fecha_registro: new Date(fechaInput) };
-            
-            try {
-                if (latestBat) { 
-                    // INSERTAR NUEVO REGISTRO HISTÓRICO
-                    const newRecord = { ...latestBat };
-                    delete newRecord.id;
-                    delete newRecord.created_at;
-                    newRecord.litros_agua = updates.litros_agua;
-                    newRecord.temperatura_max = updates.temperatura_max;
-                    newRecord.fecha_registro = updates.fecha_registro;
+       // --- GUARDADO DE HIDRATACIÓN (VERSIÓN DEFINITIVA POWER BI) ---
+document.getElementById('hydration-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); 
 
-                    const { error } = await supabaseClient.from('reportes_mensuales').insert([newRecord]);
-                    if(error) throw error;
-                    triggerAlarm('Registrado', `Historial actualizado para ${serial}`, 'success'); 
-                } else { 
-                    // Crear nuevo
-                    const nuevaData = { ...updates, numero_serie: serial, voltaje: '48V', estado: 'Cargando', tipo_equipo: 'Sin Marca', capacidad_ah: 0, ciclos_mes: 0, equipo_asignado: serial.match(/^(\d+)[ABC]$/) ? 'G' + serial.match(/^(\d+)[ABC]$/)[1] : null }; 
-                    const { error } = await supabaseClient.from('reportes_mensuales').insert([nuevaData]); 
-                    if(error) throw error;
-                    triggerAlarm('Creada', `Batería ${serial} registrada por primera vez.`, 'success'); 
-                }
-                document.getElementById('hydration-modal').classList.add('hidden'); 
-            } catch(err) {
-                alert(err.message);
-            }
-        });
+    // 1. Obtener datos del formulario
+    const serial = document.getElementById('hydro-serial').value.toUpperCase().trim();
+    const litros = document.getElementById('hydro-agua').value;
+    const temp = document.getElementById('hydro-temp').value;
+    const fechaInput = document.getElementById('hydro-fecha').value;
+    
+    // Usuario responsable
+    const usuarioResponsable = document.getElementById('user-display-name') 
+        ? document.getElementById('user-display-name').innerText 
+        : 'Usuario App';
+
+    // 2. ACTUALIZAR INVENTARIO (Foto actual)
+    // Buscamos la batería y actualizamos sus datos actuales
+    const { data: updateData, error: errorUpdate } = await supabase
+        .from('reportes_mensuales')
+        .update({ 
+            litros_agua: Number(litros), 
+            temperatura_max: Number(temp), 
+            fecha_registro: new Date(fechaInput) 
+        })
+        .eq('numero_serie', serial)
+        .select(); // Seleccionamos para ver si encontró algo
+
+    if (errorUpdate) {
+        alert("Error de conexión: " + errorUpdate.message);
+        return;
+    }
+
+    // Validación: Si no encontró la batería, avisamos (para no guardar historial huérfano)
+    if (!updateData || updateData.length === 0) {
+        alert(`La batería ${serial} no existe en el sistema. Créala primero en "Nueva Batería".`);
+        return;
+    }
+
+    // 3. GUARDAR HISTORIAL (Para Power BI)
+    const { error: errorHistory } = await supabase
+        .from('historial_operaciones')
+        .insert([{
+            tipo_evento: 'Hidratación',
+            serial_bateria: serial,
+            litros_agua_agregados: Number(litros),
+            temperatura_registrada: Number(temp),
+            usuario_responsable: usuarioResponsable,
+            fecha_evento: new Date()
+        }]);
+
+    if (errorHistory) console.error("Error guardando historial:", errorHistory);
+
+    // 4. Éxito
+    triggerAlarm('Proceso Exitoso', `Hidratación registrada para ${serial}`, 'success');
+    document.getElementById('hydration-modal').classList.add('hidden');
+    fetchData(); // Recargamos para ver los cambios
+});
 
         async function handleSave(table, data, mode, idField) {
             try {
