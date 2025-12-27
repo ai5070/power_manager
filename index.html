@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerManager Pro - Gestión de Baterías 4.9.23</title>
+    <title>PowerManager Pro - Gestión de Baterías 4.9.8</title>
     
     <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -31,9 +31,8 @@
             #qr-print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         }
 
-        /* --- ESTILOS DE BADGES (5 ESTADOS) --- */
+        /* --- ESTILOS DE BADGES ACTUALIZADOS --- */
         .badge-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; } /* En Reposo */
-        .badge-morado { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; } /* En Uso */
         .badge-rojo { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Fuera de Servicio */
         .badge-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; } /* Cargada */
         .badge-naranja { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; } /* En Carga */
@@ -41,9 +40,6 @@
         /* Badges Historial */
         .tag-op { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .tag-mant { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        
-        /* Estilo para el tiempo transcurrido */
-        .time-badge { font-size: 0.7rem; color: #6b7280; display: flex; align-items: center; gap: 2px; margin-top: 2px; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden">
@@ -177,30 +173,28 @@
                     <div id="admin-only-fields" class="hidden md:col-span-2 bg-gray-100 p-4 rounded-lg border border-gray-200 shadow-inner">
                         <p class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1 mb-3"><i data-lucide="lock" class="w-3 h-3"></i> Ficha Técnica (Admin)</p>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-medium text-gray-600">Serial Fábrica</label><input type="text" id="form-fabricanteSerial" class="w-full rounded border px-2 py-1 bg-white text-sm on-input-upper"></div>
-                            <div><label class="block text-xs font-medium text-gray-600">Marca</label><input type="text" id="form-marca" class="w-full rounded border px-2 py-1 bg-white text-sm on-input-upper"></div>
-                            <div><label class="block text-xs font-medium text-gray-600">Modelo</label><input type="text" id="form-modelo" class="w-full rounded border px-2 py-1 bg-white text-sm on-input-upper"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Serial Fábrica</label><input type="text" id="form-fabricanteSerial" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Marca</label><input type="text" id="form-marca" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
+                            <div><label class="block text-xs font-medium text-gray-600">Modelo</label><input type="text" id="form-modelo" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
                             <div><label class="block text-xs font-medium text-gray-600">Año Fab.</label><input type="number" id="form-anio" class="w-full rounded border px-2 py-1 bg-white text-sm"></div>
                         </div>
                     </div>
 
                     <!-- Campos Base -->
-                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Código Interno *</label><input type="text" id="form-serial" required class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold text-lg uppercase focus:border-indigo-500 outline-none on-input-upper" placeholder="Ej: 351A"></div>
-                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Equipo Asignado</label><input type="text" id="form-equipoAsignado" list="equipos-list" class="w-full rounded-lg border px-3 py-2 bg-gray-50 on-input-upper" placeholder="Automático o seleccionar...">
+                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Código Interno *</label><input type="text" id="form-serial" required class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold text-lg uppercase focus:border-indigo-500 outline-none" placeholder="Ej: 351A"></div>
+                    <div><label class="block text-sm font-bold text-gray-800 mb-1">Equipo Asignado</label><input type="text" id="form-equipoAsignado" list="equipos-list" class="w-full rounded-lg border px-3 py-2 bg-gray-50" placeholder="Automático o seleccionar...">
                         <datalist id="equipos-list"></datalist></div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Operativo</label>
-                        <!-- NUEVO ESTADO AGREGADO -->
                         <select id="form-estado" class="w-full rounded-lg border px-3 py-2 font-medium bg-white">
-                            <option value="En Uso">🟣 En Uso</option>
                             <option value="En Reposo">🔵 En Reposo</option>
+                            <option value="Fuera de Servicio">🔴 Fuera de Servicio</option>
                             <option value="Cargada">🟢 Cargada</option>
                             <option value="En Carga">🟠 En Carga</option>
-                            <option value="Fuera de Servicio">🔴 Fuera de Servicio</option>
                         </select>
                     </div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación Actual</label><input type="text" id="form-ubicacion" class="w-full rounded-lg border px-3 py-2 on-input-upper" placeholder="Ej: Sala Baterías, Rack 1"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación Actual</label><input type="text" id="form-ubicacion" class="w-full rounded-lg border px-3 py-2" placeholder="Ej: Sala Baterías, Rack 1"></div>
 
                     <!-- Datos Técnicos -->
                     <div class="md:col-span-2 mt-2 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
@@ -233,9 +227,9 @@
             <form id="charger-form" class="p-6 space-y-6 hidden">
                 <input type="hidden" id="charger-id">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ID Cargador</label><input type="text" id="charger-codigo" required class="w-full rounded-lg border px-3 py-2 font-bold on-input-upper"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ID Cargador</label><input type="text" id="charger-codigo" required class="w-full rounded-lg border px-3 py-2 font-bold"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">Amperaje</label><input type="number" step="0.1" id="charger-amperaje" class="w-full rounded-lg border px-3 py-2" placeholder="Ej: 100.5"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">N° Serie</label><input type="text" id="charger-serial" class="w-full rounded-lg border px-3 py-2 on-input-upper"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">N° Serie</label><input type="text" id="charger-serial" class="w-full rounded-lg border px-3 py-2"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">Voltaje</label><select id="charger-tipo" class="w-full rounded-lg border px-3 py-2"><option value="48V">48V</option><option value="24V">24V</option></select></div>
                     
                     <div class="md:col-span-2 mt-4"><h4 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1">Estado de Componentes</h4></div>
@@ -244,7 +238,7 @@
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">LED / Indicadores</label><select id="charger-led" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Fallo">Fallo</option></select></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">Estado General</label><select id="charger-estado" class="w-full rounded-lg border px-3 py-2"><option value="Operativo">Operativo</option><option value="Con Defectos">Con Defectos</option><option value="Fuera de Servicio">Fuera de Servicio</option></select></div>
                     
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label><input type="text" id="charger-ubicacion" class="w-full rounded-lg border px-3 py-2 on-input-upper"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label><input type="text" id="charger-ubicacion" class="w-full rounded-lg border px-3 py-2"></div>
                     <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label><textarea id="charger-observaciones" class="w-full rounded-lg border px-3 py-2 h-24"></textarea></div>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button></div>
@@ -260,7 +254,7 @@
                 
                 <div>
                     <label class="block text-sm font-bold text-gray-800 mb-1">Equipo / Grúa</label>
-                    <input type="text" id="bitacora-equipo" list="equipos-auto-list" class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold uppercase on-input-upper" placeholder="Seleccionar Grúa..." onchange="detectarEquipo(this.value)">
+                    <input type="text" id="bitacora-equipo" list="equipos-auto-list" class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold uppercase" placeholder="Seleccionar Grúa..." onchange="detectarEquipo(this.value)">
                     <datalist id="equipos-auto-list"></datalist>
                 </div>
 
@@ -288,12 +282,12 @@
                          <!-- ENTRADA (Rojo - Descargada/A Carga) -->
                          <div>
                             <label class="block text-xs font-bold text-red-600 mb-1 uppercase flex items-center gap-1"><i data-lucide="arrow-down-circle" class="w-3 h-3"></i> Entra (A Carga)</label>
-                            <input type="text" id="bitacora-bateria-saliente" list="baterias-list-auto" class="w-full rounded border border-red-200 px-2 py-1.5 uppercase text-sm text-red-700 font-bold on-input-upper" placeholder="Ej: 352B">
+                            <input type="text" id="bitacora-bateria-saliente" list="baterias-list-auto" class="w-full rounded border border-red-200 px-2 py-1.5 uppercase text-sm text-red-700 font-bold" placeholder="Ej: 352B">
                          </div>
                          <!-- SALIDA (Verde - Cargada/A Uso) -->
                          <div>
                             <label class="block text-xs font-bold text-green-600 mb-1 uppercase flex items-center gap-1"><i data-lucide="arrow-up-circle" class="w-3 h-3"></i> Sale (A Uso)</label>
-                            <input type="text" id="bitacora-bateria" list="baterias-list-auto" class="w-full rounded border border-green-200 px-2 py-1.5 uppercase text-sm font-bold text-green-700 on-input-upper" placeholder="Ej: 351A">
+                            <input type="text" id="bitacora-bateria" list="baterias-list-auto" class="w-full rounded border border-green-200 px-2 py-1.5 uppercase text-sm font-bold text-green-700" placeholder="Ej: 351A">
                          </div>
                          <datalist id="baterias-list-auto"></datalist>
                      </div>
@@ -318,14 +312,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-between pt-4 border-t items-center">
-                    <!-- BOTÓN ELIMINAR (SOLO VISIBLE PARA ADMIN) -->
-                    <button type="button" id="btn-delete-bitacora" onclick="deleteBitacoraCurrent()" class="hidden text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1 bg-red-50 border border-red-200 px-3 py-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Registro</button>
-                    <div class="flex gap-3 ml-auto">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button>
-                        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded shadow-lg hover:bg-indigo-700">Guardar</button>
-                    </div>
-                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded shadow-lg hover:bg-indigo-700">Guardar</button></div>
             </form>
 
             <!-- Formulario Crear Usuario (Admin) -->
@@ -371,7 +358,7 @@
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Código de Batería</label>
                     <div class="relative">
-                        <input type="text" id="hydro-serial" class="w-full rounded-lg border-2 border-blue-100 px-4 py-2 font-bold text-lg uppercase focus:border-blue-500 outline-none on-input-upper" placeholder="Ej: 351A" required oninput="detectarBateria(this.value)">
+                        <input type="text" id="hydro-serial" class="w-full rounded-lg border-2 border-blue-100 px-4 py-2 font-bold text-lg uppercase focus:border-blue-500 outline-none" placeholder="Ej: 351A" required oninput="detectarBateria(this.value)">
                         <div id="hydro-status" class="absolute right-3 top-3"><i data-lucide="search" class="text-gray-400 w-5 h-5"></i></div>
                     </div>
                     <p id="hydro-info" class="text-xs text-gray-500 mt-1 h-4">Escribe el serial para buscar...</p>
@@ -439,7 +426,7 @@
         const OLD_BATTERIES = ['G-29T', 'G-30T', 'G-32T', 'G-33T', 'G-35T', 'G-36T', 'G-90T', 'G-91T', 'G-92T', 'G-93T', 'G-94T', 'G-97T', 'G-98T'];
         const OLD_CHARGERS = ['G-03', 'G-111', 'G-223', 'G-01', 'G-219'];
 
-        const state = { currentView: 'dashboard', maintenanceView: 'baterias', maintenanceSearch: '', historySearch: '', modalMode: 'create', searchTerm: '' };
+        const state = { currentView: 'dashboard', maintenanceView: 'baterias', maintenanceSearch: '', modalMode: 'create', searchTerm: '' };
 
         // 2. HELPERS GLOBALES
         function triggerAlarm(title, message, type) {
@@ -451,122 +438,6 @@
             container.appendChild(alertDiv);
             setTimeout(() => alertDiv.remove(), 5000);
         }
-
-        // --- CALCULADORA DE TIEMPO TRANSCURRIDO ---
-        function getTimeElapsed(dateStr) {
-            if (!dateStr) return '';
-            const start = new Date(dateStr);
-            const now = new Date();
-            const diffMs = now - start;
-            if (diffMs < 0) return '0m'; 
-            
-            const diffHrs = Math.floor(diffMs / 3600000);
-            const diffMins = Math.floor((diffMs % 3600000) / 60000);
-            
-            if (diffHrs > 24) {
-                const days = Math.floor(diffHrs / 24);
-                return `${days}d ${diffHrs % 24}h`;
-            }
-            if (diffHrs > 0) return `${diffHrs}h ${diffMins}m`;
-            return `${diffMins}m`;
-        }
-        
-        // --- FUNCIÓN MANUAL DE FORMATO DE HORA (SOLUCIÓN DEFINITIVA Y LIMPIA) ---
-        function formatManualTime(input) {
-             if(!input) return '';
-             let isoString = input;
-             if (input instanceof Date) {
-                 let h = input.getHours();
-                 let m = input.getMinutes();
-                 const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-                 h = h % 12;
-                 h = h ? h : 12;
-                 return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm} hrs`;
-             }
-
-             if (typeof isoString !== 'string') return '';
-
-             const timePart = isoString.split('T')[1]; 
-             if(!timePart) {
-                 const d = new Date(isoString);
-                 if(!isNaN(d.getTime())) {
-                     let h = d.getHours();
-                     let m = d.getMinutes();
-                     const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-                     h = h % 12;
-                     h = h ? h : 12;
-                     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm} hrs`;
-                 }
-                 return '';
-             }
-             
-             let [h, m] = timePart.split(':');
-             let hours = parseInt(h);
-             const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
-             hours = hours % 12;
-             hours = hours ? hours : 12; 
-             
-             return `${hours.toString().padStart(2, '0')}:${m} ${ampm} hrs`;
-        }
-        
-        // --- GUARDADO DE HIDRATACIÓN (VERSIÓN FINAL Y LIMPIA) ---
-        document.getElementById('hydration-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            
-            // 1. Obtener datos limpios
-            const serial = document.getElementById('hydro-serial').value.toUpperCase().trim();
-            const litros = document.getElementById('hydro-agua').value;
-            const temp = document.getElementById('hydro-temp').value;
-            const fechaInput = document.getElementById('hydro-fecha').value;
-            
-            // Usuario
-            const usuarioResponsable = document.getElementById('user-display-name') 
-                ? document.getElementById('user-display-name').innerText 
-                : 'Usuario App';
-
-            // 2. ACTUALIZAR INVENTARIO (Lo que se ve en la tabla principal)
-            const { data: updateData, error: errorUpdate } = await supabaseClient
-                .from('reportes_mensuales')
-                .update({ 
-                    litros_agua: Number(litros), 
-                    temperatura_max: Number(temp), 
-                    fecha_registro: new Date(fechaInput) 
-                })
-                .eq('numero_serie', serial) // Busca por serial exacto
-                .select();
-
-            if (errorUpdate) {
-                alert("Error actualizando: " + errorUpdate.message);
-                return;
-            }
-
-            // Validación: Si la batería no existe, no guardamos nada
-            if (!updateData || updateData.length === 0) {
-                alert(`Error: La batería ${serial} no existe. Regístrala primero en el botón "Nueva Batería".`);
-                return;
-            }
-
-            // 3. GUARDAR HISTORIAL (Esto es para tu Power BI)
-            // Se asume que existe la tabla 'historial_operaciones' o similar
-            // Si no, esto fallará silenciosamente en la consola, pero la app no se romperá
-            const { error: errorHistory } = await supabaseClient
-                .from('historial_operaciones')
-                .insert([{
-                    tipo_evento: 'Hidratación',
-                    serial_bateria: serial,
-                    litros_agua_agregados: Number(litros),
-                    temperatura_registrada: Number(temp),
-                    usuario_responsable: usuarioResponsable,
-                    fecha_evento: new Date()
-                }]);
-
-            if (errorHistory) console.error("Error historial (puede que la tabla no exista aún):", errorHistory);
-
-            // 4. Finalizar
-            triggerAlarm('Guardado', `Hidratación registrada para ${serial}`, 'success');
-            document.getElementById('hydration-modal').classList.add('hidden');
-            fetchData(); // Refrescar pantalla
-        });
 
         window.exportToCSV = () => {
             if (!batteries.length) return alert("No hay datos.");
@@ -586,13 +457,6 @@
                 if (pendingAdminAction) pendingAdminAction();
             } else alert("Clave Incorrecta");
         };
-
-        // --- MANEJO DE MAYÚSCULAS AUTOMÁTICO EN INPUTS ESPECÍFICOS ---
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('on-input-upper')) {
-                e.target.value = e.target.value.toUpperCase();
-            }
-        });
 
         // --- INIT PRINCIPAL ---
         async function initApp() {
@@ -774,63 +638,6 @@
             if (turnoSelect) turnoSelect.value = shift;
         };
 
-        // --- EDICIÓN BITÁCORA ---
-        window.editBitacoraItem = (id) => {
-            const item = bitacora.find(b => b.id === id);
-            if (!item) return;
-            
-            // Llenar datos
-            document.getElementById('bitacora-id').value = item.id;
-            
-            // Fecha y hora (STRING PARSING)
-            const dateStr = item.fecha || item.created_at;
-            if(dateStr) {
-                // Soportar Date object si viene del cache
-                let datePart, timePart;
-                if(dateStr instanceof Date) {
-                    const d = dateStr;
-                    datePart = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                    timePart = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                } else if(typeof dateStr === 'string' && dateStr.includes('T')) {
-                     datePart = dateStr.split('T')[0];
-                     timePart = dateStr.split('T')[1];
-                }
-
-                if(datePart) document.getElementById('bitacora-fecha').value = datePart;
-                if(timePart) {
-                    const [h, m] = timePart.split(':');
-                    document.getElementById('bitacora-hora').value = `${h}:${m}`;
-                }
-            }
-            
-            // Resto de campos
-            document.getElementById('bitacora-equipo').value = item.equipo_id || '';
-            document.getElementById('bitacora-nuevo-horometro').value = item.horometro || '';
-            document.getElementById('bitacora-bateria-saliente').value = item.bateria_saliente || '';
-            document.getElementById('bitacora-bateria').value = item.bateria_serie || '';
-            document.getElementById('bitacora-turno').value = item.turno || 'A';
-            
-            // Mostrar modal
-            document.getElementById('modal-title').innerText = 'Editar Registro';
-            const btnDelete = document.getElementById('btn-delete-bitacora');
-            if(userRole === 'Administrador') btnDelete.classList.remove('hidden');
-            else btnDelete.classList.add('hidden');
-
-            document.getElementById('bitacora-form').classList.remove('hidden');
-            document.getElementById('modal-overlay').classList.remove('hidden');
-            detectarEquipo(item.equipo_id);
-        };
-        
-        window.deleteBitacoraCurrent = async () => {
-            const id = document.getElementById('bitacora-id').value;
-            if(!id) return;
-            if(!confirm("¿Eliminar este registro operativo?")) return;
-            await supabaseClient.from('bitacora_operaciones').delete().eq('id', id);
-            bitacora = bitacora.filter(b => b.id !== id);
-            closeModal();
-            renderApp();
-        };
-
         window.detectarEquipo = (val) => {
             selectedEquipo = equipos.find(e => e.codigo.toLowerCase() === val.toLowerCase());
             const panel = document.getElementById('calc-panel');
@@ -839,8 +646,8 @@
             if (selectedEquipo) {
                 panel.classList.remove('hidden');
                 displayAnterior.innerText = selectedEquipo.horometro_actual;
-                // inputNuevo.value = ''; // No limpiar si estamos editando
-                // inputNuevo.focus();
+                inputNuevo.value = ''; 
+                inputNuevo.focus();
                 calcularDiferencia();
             } else {
                 panel.classList.add('hidden');
@@ -864,13 +671,11 @@
 
         document.getElementById('bitacora-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('bitacora-id').value;
             const nuevoHorometro = Number(document.getElementById('bitacora-nuevo-horometro').value);
             const equipoNombre = val('bitacora-equipo');
             let horasTrabajadas = 0;
             let horometroFinal = nuevoHorometro;
-            
-            if (selectedEquipo && !id) { // Solo validar diferencia al crear nuevo
+            if (selectedEquipo) {
                 const anterior = Number(selectedEquipo.horometro_actual) || 0;
                 if (nuevoHorometro < anterior) {
                     if (!confirm(`⚠️ ALERTA: El horómetro nuevo (${nuevoHorometro}) es MENOR al anterior (${anterior}).\n\n¿Estás seguro de guardar este dato?`)) {
@@ -880,17 +685,11 @@
                 horasTrabajadas = nuevoHorometro - anterior;
                 if (horasTrabajadas < 0) horasTrabajadas = 0; 
             } else {
-                // Al editar, mantener o recalcular si es necesario, simplificado aquí
                 horasTrabajadas = 0; 
             }
-            
             const fechaStr = val('bitacora-fecha');
             const horaStr = val('bitacora-hora');
-            
-            // CORRECCION FINAL: Guardar STRING DIRECTO para evitar UTC shift
-            // Supabase acepta formato ISO string. Lo construimos manual.
-            const isoString = `${fechaStr}T${horaStr}:00`; 
-
+            const fechaFinal = new Date(`${fechaStr}T${horaStr}`);
             const d = {
                 turno: val('bitacora-turno'), 
                 tipo_operacion: 'Uso',
@@ -899,32 +698,19 @@
                 bateria_saliente: val('bitacora-bateria-saliente'),
                 horometro: horometroFinal,      
                 horas_trabajadas: horasTrabajadas,
-                fecha: isoString, 
-                // created_at no se actualiza
+                fecha: fechaFinal,
+                created_at: new Date() 
             };
-
             try {
-                if(id) {
-                    // UPDATE
-                    await supabaseClient.from('bitacora_operaciones').update(d).eq('id', id);
-                    triggerAlarm('Actualizado', `Registro editado correctamente`, 'success');
-                    // Actualizar local
-                    const idx = bitacora.findIndex(x => x.id === id);
-                    if(idx !== -1) bitacora[idx] = { ...bitacora[idx], ...d };
-                } else {
-                    // INSERT
-                    d.created_at = new Date();
-                    await supabaseClient.from('bitacora_operaciones').insert([d]);
-                    if (selectedEquipo) {
-                        await supabaseClient.from('equipos').update({ 
-                            horometro_actual: horometroFinal, 
-                            ultima_actualizacion: new Date() 
-                        }).eq('id', selectedEquipo.id);
-                    }
-                    triggerAlarm('Registrado', `Grúa ${equipoNombre} - ${horasTrabajadas.toFixed(1)} Hrs agregadas`, 'success');
-                    bitacora.unshift(d);
+                await supabaseClient.from('bitacora_operaciones').insert([d]);
+                if (selectedEquipo) {
+                    await supabaseClient.from('equipos').update({ 
+                        horometro_actual: horometroFinal, 
+                        ultima_actualizacion: new Date() 
+                    }).eq('id', selectedEquipo.id);
                 }
-                
+                triggerAlarm('Registrado', `Grúa ${equipoNombre} - ${horasTrabajadas.toFixed(1)} Hrs agregadas`, 'success');
+                bitacora.unshift(d); 
                 fetchData();
                 closeModal();
             } catch(err) { alert(err.message); }
@@ -938,6 +724,35 @@
             document.getElementById('hydro-modal').classList.remove('hidden');
             document.getElementById('hydro-litros').focus();
         };
+
+        document.getElementById('hydro-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('hydro-id').value;
+            const litros = Number(document.getElementById('hydro-litros').value);
+            
+            try {
+                const existingBattery = batteries.find(b => b.id === id);
+                if (!existingBattery) throw new Error("Batería no encontrada");
+
+                // CLONAR Y LIMPIAR ID PARA CREAR NUEVO
+                const newRecord = { ...existingBattery };
+                delete newRecord.id; 
+                delete newRecord.created_at; 
+                
+                newRecord.litros_agua = litros;
+                newRecord.fecha_registro = new Date();
+
+                const { error } = await supabaseClient.from('reportes_mensuales').insert([newRecord]);
+                
+                if (error) throw error;
+                
+                triggerAlarm('Hidratación', 'Nuevo registro histórico creado', 'success');
+                document.getElementById('hydro-modal').classList.add('hidden');
+                // Realtime actualizará la UI automáticamente
+            } catch (err) {
+                alert(err.message);
+            }
+        });
 
         document.getElementById('battery-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1015,6 +830,64 @@
             }
             lucide.createIcons();
         };
+
+       // --- GUARDADO DE HIDRATACIÓN (VERSIÓN DEFINITIVA POWER BI) ---
+document.getElementById('hydration-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); 
+
+    // 1. Obtener datos del formulario
+    const serial = document.getElementById('hydro-serial').value.toUpperCase().trim();
+    const litros = document.getElementById('hydro-agua').value;
+    const temp = document.getElementById('hydro-temp').value;
+    const fechaInput = document.getElementById('hydro-fecha').value;
+    
+    // Usuario responsable
+    const usuarioResponsable = document.getElementById('user-display-name') 
+        ? document.getElementById('user-display-name').innerText 
+        : 'Usuario App';
+
+    // 2. ACTUALIZAR INVENTARIO (Foto actual)
+    // Buscamos la batería y actualizamos sus datos actuales
+    const { data: updateData, error: errorUpdate } = await supabase
+        .from('reportes_mensuales')
+        .update({ 
+            litros_agua: Number(litros), 
+            temperatura_max: Number(temp), 
+            fecha_registro: new Date(fechaInput) 
+        })
+        .eq('numero_serie', serial)
+        .select(); // Seleccionamos para ver si encontró algo
+
+    if (errorUpdate) {
+        alert("Error de conexión: " + errorUpdate.message);
+        return;
+    }
+
+    // Validación: Si no encontró la batería, avisamos (para no guardar historial huérfano)
+    if (!updateData || updateData.length === 0) {
+        alert(`La batería ${serial} no existe en el sistema. Créala primero en "Nueva Batería".`);
+        return;
+    }
+
+    // 3. GUARDAR HISTORIAL (Para Power BI)
+    const { error: errorHistory } = await supabase
+        .from('historial_operaciones')
+        .insert([{
+            tipo_evento: 'Hidratación',
+            serial_bateria: serial,
+            litros_agua_agregados: Number(litros),
+            temperatura_registrada: Number(temp),
+            usuario_responsable: usuarioResponsable,
+            fecha_evento: new Date()
+        }]);
+
+    if (errorHistory) console.error("Error guardando historial:", errorHistory);
+
+    // 4. Éxito
+    triggerAlarm('Proceso Exitoso', `Hidratación registrada para ${serial}`, 'success');
+    document.getElementById('hydration-modal').classList.add('hidden');
+    fetchData(); // Recargamos para ver los cambios
+});
 
         async function handleSave(table, data, mode, idField) {
             try {
@@ -1095,7 +968,7 @@
 
         function renderDashboard(c) {
             const total = batteries.length;
-            const counts = { 'En Reposo': 0, 'Cargada': 0, 'En Carga': 0, 'Fuera de Servicio': 0, 'En Uso': 0 };
+            const counts = { 'En Reposo': 0, 'Cargada': 0, 'En Carga': 0, 'Fuera de Servicio': 0 };
 
             batteries.forEach(b => {
                 const st = (b.estado || '').toLowerCase();
@@ -1106,10 +979,8 @@
                     counts['En Carga']++;
                 } else if (st.includes('servicio') || st.includes('mantenimiento') || st.includes('falla')) {
                     counts['Fuera de Servicio']++;
-                } else if (st.includes('uso')) {
-                     counts['En Uso']++;
                 } else {
-                    // Default to Reposo (Blue)
+                    // Default to Reposo (Blue) which also covers "En Uso" based on previous logic sharing Blue
                     counts['En Reposo']++;
                 }
             });
@@ -1158,7 +1029,7 @@
                     datasets: [{ 
                         label: 'Baterías', 
                         data: Object.values(counts), 
-                        backgroundColor: ['#3b82f6', '#22c55e', '#f97316', '#ef4444', '#9333ea'] 
+                        backgroundColor: ['#3b82f6', '#22c55e', '#f97316', '#ef4444'] 
                     }] 
                 }, 
                 options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}} 
@@ -1216,24 +1087,17 @@
             let rows = filtered.map(b => {
                 const st = (b.estado || '').toLowerCase();
                 let statusClass = 'bg-gray-100 text-gray-800'; 
-                if (st.includes('uso')) statusClass = 'badge-morado';
-                else if (st.includes('reposo')) statusClass = 'badge-azul';
-                else if (st.includes('mantenimiento') || st.includes('falla') || st.includes('servicio')) statusClass = 'badge-rojo';
-                else if (st.includes('carga') && !st.includes('cargada')) statusClass = 'badge-naranja';
-                else if (st.includes('cargada')) statusClass = 'badge-verde';
+                if (st.includes('uso')) statusClass = 'badge-azul';
+                else if (st.includes('mantenimiento') || st.includes('falla')) statusClass = 'badge-rojo';
+                else if (st.includes('carga') || st.includes('cargando')) statusClass = 'badge-verde';
+                else if (st.includes('reposo')) statusClass = 'badge-amarillo';
                 
-                // CÁLCULO DE TIEMPO TRANSCURRIDO (NUEVO)
-                const timeElapsed = b.fecha_registro ? getTimeElapsed(b.fecha_registro) : '';
-
                 return `<tr class="hover:bg-gray-50 border-b">
                     <td class="table-cell font-bold text-indigo-700 text-lg">${b.numero_serie}</td>
                     <td class="table-cell"><div class="font-medium text-gray-800">${b.tipo_equipo||'Sin Marca'}</div><div class="text-xs text-gray-500">${b.modelo||'-'}</div></td>
                     <td class="table-cell"><div class="font-medium text-gray-800">${b.voltaje}</div><div class="text-xs text-gray-500">${b.capacidad_ah ? b.capacidad_ah+' Ah' : '-'}</div></td>
                     <td class="table-cell"><div class="flex items-center gap-4"><span class="flex items-center gap-1 text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded"><i data-lucide="droplet" class="w-3 h-3"></i> ${b.litros_agua||0} L</span><span class="flex items-center gap-1 text-red-600 font-bold text-xs bg-red-50 px-2 py-1 rounded"><i data-lucide="thermometer" class="w-3 h-3"></i> ${b.temperatura_max||0}°C</span></div></td>
-                    <td class="table-cell">
-                        <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${b.estado}</span>
-                        <div class="time-badge"><i data-lucide="clock" class="w-3 h-3"></i> ${timeElapsed}</div>
-                    </td>
+                    <td class="table-cell"><span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${b.estado}</span></td>
                     <td class="table-cell text-right flex justify-end gap-2">
                         <button onclick="openHydroModal('${b.id}', '${b.numero_serie}')" class="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition flex items-center gap-1">
                             <i data-lucide="droplet" class="w-3 h-3"></i>
@@ -1249,35 +1113,15 @@
             document.getElementById('inventory-body').innerHTML = rows;
         }
 
-        // --- CORRECCIÓN EN RENDER BITÁCORA ---
         function renderBitacora(c) {
             let rows = bitacora.map(b => {
                 const dObj = new Date(b.fecha || b.created_at);
-                // Extraer componentes de fecha localmente para asegurar consistencia
-                // getUTCDate() NO, usamos getDate() local del navegador
-                const day = dObj.getDate().toString().padStart(2, '0');
-                const month = (dObj.getMonth() + 1).toString().padStart(2, '0');
-                const year = dObj.getFullYear();
-                const dateStr = `${day}-${month}-${year}`;
-
-                // FORMATEADOR MANUAL DE HORA (SOLUCIÓN DEFINITIVA)
-                const timeStr = formatManualTime(dObj);
-                
-                // Botones de acción según rol
-                let actions = '';
-                if(userRole === 'Administrador' || userRole === 'Supervisor' || userRole === 'Operario') {
-                    // Todos pueden editar
-                    actions += `<button onclick="editBitacoraItem('${b.id}')" class="text-indigo-600 hover:text-indigo-800 p-1 mr-2 transition" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>`;
-                }
-                if(userRole === 'Administrador') {
-                    // Solo admin puede borrar
-                    actions += `<button onclick="deleteBitacoraItem('${b.id}')" class="text-red-400 hover:text-red-600 p-1 transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-                }
-
+                const dateStr = dObj.toLocaleDateString('es-CL');
+                const timeStr = dObj.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
                 return `<tr class="hover:bg-gray-50 border-b">
                     <td class="table-cell">
                         <div class="font-bold text-gray-800">${dateStr}</div>
-                        <div class="text-xs text-gray-500">${timeStr}</div> <!-- HORA CORRECTA -->
+                        <div class="text-xs text-gray-500">${timeStr} hrs</div>
                     </td>
                     <td class="table-cell"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">${b.equipo_id||'-'}</span></td>
                     <td class="table-cell font-mono text-gray-800 font-bold">${b.horometro||'-'} Hrs <span class="text-xs text-green-600 font-normal">(+${b.horas_trabajadas||0})</span></td>
@@ -1288,11 +1132,10 @@
                         </div>
                     </td>
                     <td class="table-cell text-xs text-gray-500">${b.turno||'-'}</td>
-                    <td class="table-cell text-right">${actions}</td>
                 </tr>`;
             }).join('');
-            if(!rows) rows = `<tr><td colspan="6" class="p-8 text-center text-gray-400">Sin movimientos registrados.</td></tr>`;
-            c.innerHTML = `<div class="flex justify-between items-center mb-6"><div><h2 class="text-xl font-bold text-gray-800">Bitácora de Operaciones</h2><p class="text-sm text-gray-500">Registro histórico de movimientos y horómetros.</p></div><button onclick="window.openBitacoraModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="calculator" class="w-4 h-4"></i> Registro Automático</button></div><div class="bg-white rounded-xl shadow border overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="table-header">Fecha/Hora</th><th class="table-header">Equipo</th><th class="table-header">Horómetro Total</th><th class="table-header">Movimiento Batería</th><th class="table-header text-center">Turno</th><th class="table-header text-right">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+            if(!rows) rows = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Sin movimientos registrados.</td></tr>`;
+            c.innerHTML = `<div class="flex justify-between items-center mb-6"><div><h2 class="text-xl font-bold text-gray-800">Bitácora de Operaciones</h2><p class="text-sm text-gray-500">Registro histórico de movimientos y horómetros.</p></div><button onclick="window.openBitacoraModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="calculator" class="w-4 h-4"></i> Registro Automático</button></div><div class="bg-white rounded-xl shadow border overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="table-header">Fecha/Hora</th><th class="table-header">Equipo</th><th class="table-header">Horómetro Total</th><th class="table-header">Movimiento Batería</th><th class="table-header text-center">Turno</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         }
 
         function renderMaintenance(c) {
@@ -1320,7 +1163,6 @@
                 const term = state.maintenanceSearch ? state.maintenanceSearch.toLowerCase() : '';
                 const uniqueBatteries = getUniqueBatteries();
                 
-                // Filtrar y luego ORDENAR DESCENDENTE para mostrar lo más nuevo primero
                 const filteredBats = uniqueBatteries
                     .filter(b => (b.numero_serie||'').toLowerCase().includes(term))
                     .sort((a,b) => new Date(b.fecha_registro) - new Date(a.fecha_registro));
@@ -1386,7 +1228,6 @@
         function renderHistory(c) {
             c.innerHTML = `<div class="text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-indigo-600"></i></div>`;
             
-            // 1. COMBINAR DOS FUENTES DE DATOS: Bitacora (Operaciones) + Batteries (Mantenciones)
             const combinedHistory = [
                 ...bitacora.map(b => ({
                     type: 'Operación',
@@ -1418,32 +1259,11 @@
                 }))
             ].sort((a,b) => b.date - a.date); 
 
-            // 2. FILTRAR POR BÚSQUEDA
-            const term = state.historySearch.toLowerCase();
-            const filteredHistory = combinedHistory.filter(item => 
-                (item.main_id || '').toLowerCase().includes(term) ||
-                (item.sub_id || '').toLowerCase().includes(term) ||
-                (item.type || '').toLowerCase().includes(term) ||
-                (item.detail || '').toLowerCase().includes(term)
-            );
-
-            const rows = filteredHistory.map(item => {
+            const rows = combinedHistory.map(item => {
                 const dateStr = item.date.toLocaleDateString('es-CL');
-                const timeStr = formatManualTime(item.raw.fecha || item.raw.created_at); // USAMOS EL MISMO FORMATEADOR MANUAL
-
-                let actions = '';
-                if(item.is_op) {
-                    if(userRole === 'Administrador' || userRole === 'Supervisor' || userRole === 'Operario') {
-                        actions += `<button onclick="editBitacoraItem('${item.id}')" class="text-indigo-600 hover:text-indigo-800 p-1 mr-1"><i data-lucide="pencil" class="w-4 h-4"></i></button>`;
-                    }
-                    if(userRole === 'Administrador') {
-                        actions += `<button onclick="deleteBitacoraItem('${item.id}')" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-                    }
-                } else {
-                     if(userRole === 'Administrador') {
-                        actions += `<button onclick="deleteBatteryHistoryItem('${item.id}')" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-                    }
-                }
+                const timeStr = item.date.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+                const deleteBtn = userRole === 'Administrador' ? 
+                    `<button onclick="${item.is_op ? `deleteBitacoraItem('${item.id}')` : `deleteBatteryHistoryItem('${item.id}')`}" class="text-red-400 hover:text-red-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '';
 
                 return `<tr class="border-b hover:bg-gray-50 transition">
                     <td class="table-cell">
@@ -1460,42 +1280,28 @@
                     <td class="table-cell text-center font-mono text-xs text-gray-600">${item.water}</td>
                     <td class="table-cell text-center font-mono text-xs text-gray-600">${item.temp}</td>
                     <td class="table-cell text-center font-bold text-indigo-600 text-xs">${item.instance}</td>
-                    <td class="table-cell text-right">${actions}</td>
+                    <td class="table-cell text-right">${deleteBtn}</td>
                 </tr>`;
             }).join('');
 
-            // LAYOUT DEL HISTORIAL CON BUSCADOR
-            if (!document.getElementById('history-layout')) {
-                c.innerHTML = `
-                <div id="history-layout">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <div><h2 class="text-2xl font-bold text-gray-800">Historial Global Unificado</h2><p class="text-sm text-gray-500">Registro completo de operaciones y mantenciones.</p></div>
-                        <div class="flex gap-2 w-full md:w-auto">
-                             <input id="history-search" oninput="state.historySearch=this.value; renderApp()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Buscar evento, equipo o batería..." value="${state.historySearch}">
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow border overflow-hidden">
-                        <table class="w-full">
-                            <thead class="bg-gray-100 border-b border-gray-200">
-                                <tr>
-                                    <th class="table-header">Fecha</th>
-                                    <th class="table-header">Tipo</th>
-                                    <th class="table-header">ID Principal / Sec</th>
-                                    <th class="table-header text-center">Agua</th>
-                                    <th class="table-header text-center">Temp</th>
-                                    <th class="table-header text-center">Instancia</th>
-                                    <th class="table-header text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-body"></tbody>
-                        </table>
-                    </div>
-                </div>`;
-                const inp = document.getElementById('history-search');
-                if(inp) { inp.value = state.historySearch; inp.focus(); }
-            }
-
-            document.getElementById('history-body').innerHTML = rows || `<tr><td colspan="7" class="p-8 text-center text-gray-400">No se encontraron eventos.</td></tr>`;
+            c.innerHTML = `
+            <div class="flex justify-between items-center mb-6"><div><h2 class="text-2xl font-bold text-gray-800">Historial Global Unificado</h2><p class="text-sm text-gray-500">Registro completo de operaciones y mantenciones.</p></div></div>
+            <div class="bg-white rounded-xl shadow border overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                            <th class="table-header">Fecha</th>
+                            <th class="table-header">Tipo</th>
+                            <th class="table-header">ID Principal / Sec</th>
+                            <th class="table-header text-center">Agua</th>
+                            <th class="table-header text-center">Temp</th>
+                            <th class="table-header text-center">Instancia</th>
+                            <th class="table-header text-right">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
             lucide.createIcons();
         }
 
