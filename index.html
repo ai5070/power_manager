@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerManager Pro - Gestión de Baterías 4.9.28</title>
+    <title>PowerManager Pro - Gestión de Baterías 4.9.35</title>
     
     <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -68,7 +68,13 @@
                 <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">Iniciar Sesión</h2>
                 <form id="login-form" class="space-y-5">
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">Correo</label><input type="email" id="login-email" required class="w-full rounded-lg border px-3 py-2"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label><input type="password" id="login-password" required class="w-full rounded-lg border px-3 py-2"></div>
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" required class="w-full rounded-lg border px-3 py-2 pr-10">
+                        <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                     <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg">Ingresar</button>
                 </form>
                 <div id="local-reset-btn" class="hidden mt-4 pt-4 border-t border-gray-100">
@@ -250,7 +256,7 @@
                 <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button></div>
             </form>
 
-            <!-- Formulario Bitácora (ACTUALIZADO: COLORES Y ETIQUETAS CORRECTAS) -->
+            <!-- Formulario Bitácora (ACTUALIZADO: CAMPO VISIBLE + DETECCIÓN ONINPUT + BLOQUEO DOBLE CLIC) -->
             <form id="bitacora-form" class="p-6 space-y-5 hidden">
                 <input type="hidden" id="bitacora-id">
                 <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-4">
@@ -260,7 +266,7 @@
                 
                 <div>
                     <label class="block text-sm font-bold text-gray-800 mb-1">Equipo / Grúa</label>
-                    <input type="text" id="bitacora-equipo" list="equipos-auto-list" class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold uppercase on-input-upper" placeholder="Seleccionar Grúa..." onchange="detectarEquipo(this.value)">
+                    <input type="text" id="bitacora-equipo" list="equipos-auto-list" class="w-full rounded-lg border-2 border-indigo-100 px-3 py-2 font-bold uppercase on-input-upper" placeholder="Seleccionar Grúa..." oninput="detectarEquipo(this.value)">
                     <datalist id="equipos-auto-list"></datalist>
                 </div>
 
@@ -270,20 +276,22 @@
                         <span class="text-gray-500">Horómetro Anterior:</span>
                         <span id="display-horometro-anterior" class="font-mono font-bold text-gray-800">0</span>
                     </div>
-                    <div class="flex justify-between items-center text-sm font-bold text-green-600 border-t pt-2 mt-1">
-                        <span>Horas Trabajadas (Calc):</span>
-                        <span id="display-horas-trabajadas">+0.0 Hrs</span>
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                     <div class="col-span-2">
+                     <div>
                         <label class="block text-sm font-bold text-gray-800 mb-1">Nuevo Horómetro (Actual)</label>
                         <input type="number" step="0.1" id="bitacora-nuevo-horometro" class="w-full rounded-lg border-2 border-indigo-500 bg-indigo-50 px-3 py-2 font-bold text-lg text-indigo-900 outline-none" placeholder="Ej: 2987" oninput="calcularDiferencia()">
-                        <p class="text-xs text-gray-500 mt-1">Ingrese el valor que marca la máquina.</p>
+                        <p class="text-xs text-gray-500 mt-1">Ingrese el valor de la máquina.</p>
+                     </div>
+                     <!-- NUEVO CAMPO VISIBLE PARA HORAS TRABAJADAS (SOLO LECTURA) -->
+                     <div>
+                        <label class="block text-sm font-bold text-green-700 mb-1">Horas Trabajadas</label>
+                        <input type="number" step="0.1" id="bitacora-horas-trabajadas" readonly class="w-full rounded-lg border-2 border-gray-200 bg-gray-100 px-3 py-2 font-bold text-lg text-gray-600 outline-none cursor-not-allowed" placeholder="0.0">
+                        <p class="text-xs text-gray-500 mt-1">Cálculo automático (No editable).</p>
                      </div>
                      
-                     <!-- SECCIÓN DE BATERÍAS (COLORES CORREGIDOS: ENTRADA=ROJO, SALIDA=VERDE) -->
+                     <!-- SECCIÓN DE BATERÍAS (CORREGIDO: ORDEN INVERTIDO Y COLORES) -->
                      <div class="col-span-2 grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded border border-gray-200">
                          <!-- ENTRADA (Rojo - Descargada/A Carga) -->
                          <div>
@@ -318,12 +326,12 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t items-center">
+                <div class="flex justify-between pt-4 border-t items-center">
                     <!-- BOTÓN ELIMINAR (SOLO VISIBLE PARA ADMIN) -->
                     <button type="button" id="btn-delete-bitacora" onclick="deleteBitacoraCurrent()" class="hidden text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1 bg-red-50 border border-red-200 px-3 py-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Registro</button>
                     <div class="flex gap-3 ml-auto">
                         <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded">Cancelar</button>
-                        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded shadow-lg hover:bg-indigo-700">Guardar</button>
+                        <button type="submit" id="btn-save-bitacora" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">Guardar</button>
                     </div>
                 </div>
             </form>
@@ -358,9 +366,9 @@
         </div>
     </div>
 
-    <!-- Modales Adicionales (Registro Agua, Seguridad, Hidratación Rápida) -->
+    <!-- Modales Adicionales -->
     
-    <!-- Modal Búsqueda Hidratación (Antiguo - Restaurado) -->
+    <!-- Modal Búsqueda Hidratación -->
     <div id="hydration-modal" class="fixed inset-0 bg-indigo-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-bounce-in">
             <div class="p-5 border-b bg-blue-50 rounded-t-2xl flex justify-between items-center">
@@ -386,7 +394,7 @@
         </div>
     </div>
 
-    <!-- NUEVO: Modal Hidratación Directa (Desde Botón) -->
+    <!-- Modal Hidratación Rápida -->
     <div id="hydro-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in">
             <div class="p-5 border-b bg-blue-50 flex justify-between items-center">
@@ -532,6 +540,16 @@
             }
         });
 
+        // --- FUNCION TOGGLE PASSWORD ---
+        window.togglePasswordVisibility = (id) => {
+            const input = document.getElementById(id);
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        };
+
         // --- GUARDADO DE HIDRATACIÓN (VERSIÓN FINAL Y LIMPIA) ---
         document.getElementById('hydration-form').addEventListener('submit', async (e) => {
             e.preventDefault(); 
@@ -570,7 +588,6 @@
             }
 
             // 3. GUARDAR HISTORIAL (Esto es para tu Power BI)
-            // Se asume que existe la tabla 'historial_operaciones' o similar
             const { error: errorHistory } = await supabaseClient
                 .from('historial_operaciones')
                 .insert([{
@@ -617,7 +634,11 @@
                 supabaseClient.channel('users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => { if(state.currentView === 'usuarios') fetchData(); }).subscribe();
                 supabaseClient.channel('bats').on('postgres_changes', { event: '*', schema: 'public', table: 'reportes_mensuales' }, (p) => { handleRealtime(p, batteries); renderApp(); }).subscribe();
                 supabaseClient.channel('chgs').on('postgres_changes', { event: '*', schema: 'public', table: 'charger_inventory' }, (p) => { handleRealtime(p, chargers); renderApp(); }).subscribe();
-                supabaseClient.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { if(p.eventType === 'INSERT') bitacora.unshift(p.new); if(state.currentView === 'bitacora' || state.currentView === 'historial') renderApp(); }).subscribe();
+                // CORRECCIÓN REALTIME BITÁCORA: Ahora escucha INSERT, UPDATE y DELETE
+                supabaseClient.channel('bitacora').on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora_operaciones' }, (p) => { 
+                    handleBitacoraRealtime(p);
+                }).subscribe();
+                
                 supabaseClient.channel('equipos').on('postgres_changes', { event: '*', schema: 'public', table: 'equipos' }, (p) => { handleRealtime(p, equipos); }).subscribe();
 
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -676,7 +697,6 @@
 
         async function fetchData() {
             if (!isDemoMode) {
-                // MODIFICADO: Ordenar por fecha ASCENDENTE
                 const { data: b } = await supabaseClient.from('reportes_mensuales').select('*').order('created_at', { ascending: true }); 
                 if(b) batteries = b;
                 const { data: c } = await supabaseClient.from('charger_inventory').select('*'); if(c) chargers = c.sort((a,b)=>a.codigo>b.codigo?1:-1);
@@ -700,6 +720,28 @@
                     const i = list.findIndex(x => x.id === deletedId); 
                     if(i!==-1) list.splice(i, 1); 
                 }
+            }
+        }
+        
+        // FUNCIÓN DEDICADA PARA BITÁCORA (Orden Descendente Estricto)
+        function handleBitacoraRealtime(p) {
+            if (p.eventType === 'INSERT') {
+                bitacora.unshift(p.new);
+            }
+            if (p.eventType === 'UPDATE') {
+                const i = bitacora.findIndex(x => x.id === p.new.id);
+                if(i !== -1) bitacora[i] = p.new;
+            }
+            if (p.eventType === 'DELETE') {
+                const deletedId = p.old ? p.old.id : (p.payload ? p.payload.id : null);
+                if(deletedId) bitacora = bitacora.filter(x => x.id !== deletedId);
+            }
+            
+            // SIEMPRE REORDENAR POR FECHA DE CREACIÓN (Lo más nuevo arriba)
+            bitacora.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            if(state.currentView === 'bitacora' || state.currentView === 'historial') {
+                renderApp();
             }
         }
 
@@ -773,6 +815,11 @@
         }
 
         window.openBitacoraModal = () => {
+            // REINICIO OBLIGATORIO DE VARIABLES PARA EVITAR "CONFUSIÓN"
+            selectedEquipo = null; 
+            document.getElementById('calc-panel').classList.add('hidden');
+            document.getElementById('bitacora-equipo').value = '';
+            
             setupModal('Bitácora', 'bitacora-form');
             const now = new Date();
             const h = now.getHours();
@@ -821,6 +868,7 @@
             // Resto de campos
             document.getElementById('bitacora-equipo').value = item.equipo_id || '';
             document.getElementById('bitacora-nuevo-horometro').value = item.horometro || '';
+            document.getElementById('bitacora-horas-trabajadas').value = item.horas_trabajadas || ''; 
             document.getElementById('bitacora-bateria-saliente').value = item.bateria_saliente || '';
             document.getElementById('bitacora-bateria').value = item.bateria_serie || '';
             document.getElementById('bitacora-turno').value = item.turno || 'A';
@@ -828,37 +876,35 @@
             // Mostrar modal
             document.getElementById('modal-title').innerText = 'Editar Registro';
             const btnDelete = document.getElementById('btn-delete-bitacora');
-            // SOLO EL ADMIN PUEDE VER EL BOTÓN ELIMINAR EN BITÁCORA
             if(userRole === 'Administrador') btnDelete.classList.remove('hidden');
             else btnDelete.classList.add('hidden');
 
             document.getElementById('bitacora-form').classList.remove('hidden');
             document.getElementById('modal-overlay').classList.remove('hidden');
             
-            // Calcular diferencia inicial
+            // Forzar detección para calcular la diferencia inicial (aunque ya esté guardada)
+            // Esto asegura que si cambian algo, se actualice.
             detectarEquipo(item.equipo_id);
         };
         
         window.deleteBitacoraCurrent = async () => {
             const id = document.getElementById('bitacora-id').value;
             if(!id) return;
-            if(!confirm("¿Eliminar este registro operativo?")) return;
+            if(!confirm("⚠️ ¿Estás seguro de eliminar este registro operativo?")) return;
             await supabaseClient.from('bitacora_operaciones').delete().eq('id', id);
-            bitacora = bitacora.filter(b => b.id !== id);
+            // La actualización de UI la maneja handleBitacoraRealtime ahora
             closeModal();
-            renderApp();
         };
 
         window.detectarEquipo = (val) => {
+            if (!equipos || equipos.length === 0) return; // Protección contra carga lenta
+            
             selectedEquipo = equipos.find(e => e.codigo.toLowerCase() === val.toLowerCase());
             const panel = document.getElementById('calc-panel');
             const displayAnterior = document.getElementById('display-horometro-anterior');
-            const inputNuevo = document.getElementById('bitacora-nuevo-horometro');
             if (selectedEquipo) {
                 panel.classList.remove('hidden');
                 displayAnterior.innerText = selectedEquipo.horometro_actual;
-                // inputNuevo.value = ''; // No limpiar si estamos editando
-                // inputNuevo.focus();
                 calcularDiferencia();
             } else {
                 panel.classList.add('hidden');
@@ -870,82 +916,116 @@
             const nuevoVal = Number(document.getElementById('bitacora-nuevo-horometro').value) || 0;
             const anteriorVal = Number(selectedEquipo.horometro_actual) || 0;
             const diferencia = (nuevoVal - anteriorVal).toFixed(1);
-            const display = document.getElementById('display-horas-trabajadas');
-            if (diferencia >= 0) {
-                display.className = "text-green-600 font-bold";
-                display.innerText = `+${diferencia} Hrs`;
-            } else {
-                display.className = "text-red-600 font-bold animate-pulse";
-                display.innerText = `⚠️ Error (${diferencia} Hrs)`;
+            
+            // Actualizar input visible
+            const inputHoras = document.getElementById('bitacora-horas-trabajadas');
+            if(inputHoras) {
+                inputHoras.value = diferencia >= 0 ? diferencia : 0;
             }
         };
 
         document.getElementById('bitacora-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btnSave = document.getElementById('btn-save-bitacora');
+            
+            // BLOQUEO DE DOBLE CLIC
+            btnSave.disabled = true;
+            btnSave.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Guardando...`;
+            
             const id = document.getElementById('bitacora-id').value;
             const nuevoHorometro = Number(document.getElementById('bitacora-nuevo-horometro').value);
             const equipoNombre = val('bitacora-equipo');
-            let horasTrabajadas = 0;
-            let horometroFinal = nuevoHorometro;
             
-            if (selectedEquipo && !id) { // Solo validar diferencia al crear nuevo
+            // INTENTO DE RECUPERACIÓN DE EQUIPO SI NO ESTÁ SELECCIONADO
+            if (!selectedEquipo && equipoNombre) {
+                 detectarEquipo(equipoNombre);
+                 // Pequeña pausa para asegurar que el cálculo se haga
+                 await new Promise(r => setTimeout(r, 100)); 
+            }
+            
+            // TOMAR EL VALOR DEL INPUT VISIBLE (MANUAL O CALCULADO)
+            let horasTrabajadas = Number(document.getElementById('bitacora-horas-trabajadas').value) || 0;
+            let horometroFinal = nuevoHorometro;
+
+            // Validación solo al crear si no es admin, o siempre.
+            if (!id && selectedEquipo) { 
                 const anterior = Number(selectedEquipo.horometro_actual) || 0;
                 if (nuevoHorometro < anterior) {
                     if (!confirm(`⚠️ ALERTA: El horómetro nuevo (${nuevoHorometro}) es MENOR al anterior (${anterior}).\n\n¿Estás seguro de guardar este dato?`)) {
+                        btnSave.disabled = false;
+                        btnSave.innerText = "Guardar";
                         return; 
                     }
                 }
-                horasTrabajadas = nuevoHorometro - anterior;
-                if (horasTrabajadas < 0) horasTrabajadas = 0; 
-            } else {
-                // Al editar, mantener o recalcular si es necesario, simplificado aquí
-                horasTrabajadas = 0; 
             }
             
             const fechaStr = val('bitacora-fecha');
             const horaStr = val('bitacora-hora');
-            
-            // CORRECCION FINAL: Guardar STRING DIRECTO para evitar UTC shift
-            // Supabase acepta formato ISO string. Lo construimos manual.
             const isoString = `${fechaStr}T${horaStr}:00`; 
+            const batSale = val('bitacora-bateria'); // Verde - Sale a uso
+            const batEntra = val('bitacora-bateria-saliente'); // Rojo - Entra a carga
 
             const d = {
                 turno: val('bitacora-turno'), 
                 tipo_operacion: 'Uso',
                 equipo_id: equipoNombre, 
-                bateria_serie: val('bitacora-bateria'),
-                bateria_saliente: val('bitacora-bateria-saliente'),
+                bateria_serie: batSale, 
+                bateria_saliente: batEntra, 
                 horometro: horometroFinal,      
-                horas_trabajadas: horasTrabajadas,
+                horas_trabajadas: horasTrabajadas, 
                 fecha: isoString, 
-                // created_at no se actualiza
             };
 
             try {
                 if(id) {
-                    // UPDATE
                     await supabaseClient.from('bitacora_operaciones').update(d).eq('id', id);
                     triggerAlarm('Actualizado', `Registro editado correctamente`, 'success');
-                    // Actualizar local
-                    const idx = bitacora.findIndex(x => x.id === id);
-                    if(idx !== -1) bitacora[idx] = { ...bitacora[idx], ...d };
                 } else {
-                    // INSERT
                     d.created_at = new Date();
                     await supabaseClient.from('bitacora_operaciones').insert([d]);
+                    
+                    // --- SINCRONIZACION AUTOMATICA DE ESTADOS ---
+                    
+                    // 1. Actualizar Batería que SALE (Se va a usar) -> 'En Uso'
+                    if (batSale) {
+                        await supabaseClient.from('reportes_mensuales')
+                            .update({ 
+                                estado: 'En Uso', 
+                                equipo_asignado: equipoNombre, 
+                                fecha_registro: new Date() 
+                            })
+                            .eq('numero_serie', batSale);
+                    }
+
+                    // 2. Actualizar Batería que ENTRA (Viene descargada) -> 'En Carga'
+                    if (batEntra) {
+                        await supabaseClient.from('reportes_mensuales')
+                            .update({ 
+                                estado: 'En Carga', 
+                                equipo_asignado: null, // Se libera del equipo
+                                fecha_registro: new Date() 
+                            })
+                            .eq('numero_serie', batEntra);
+                    }
+                    
+                    // Actualizar Horómetro del Equipo
                     if (selectedEquipo) {
                         await supabaseClient.from('equipos').update({ 
                             horometro_actual: horometroFinal, 
                             ultima_actualizacion: new Date() 
                         }).eq('id', selectedEquipo.id);
                     }
+
                     triggerAlarm('Registrado', `Grúa ${equipoNombre} - ${horasTrabajadas.toFixed(1)} Hrs agregadas`, 'success');
-                    bitacora.unshift(d);
                 }
                 
-                fetchData();
                 closeModal();
-            } catch(err) { alert(err.message); }
+            } catch(err) { 
+                alert(err.message); 
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerText = "Guardar";
+            }
         });
 
         // NUEVO: Funcionalidad Hidratación Rápida con INSERCIÓN DE NUEVO REGISTRO
@@ -1321,17 +1401,23 @@
                     actions += `<button onclick="deleteBitacoraItem('${b.id}')" class="text-red-400 hover:text-red-600 p-1 transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
                 }
 
+                // CORRECCIÓN VISUAL: INVERSIÓN DE CAMPOS PARA MOSTRAR CORRECTAMENTE
+                // bateria_serie se mostrará como ENTRA (en la etiqueta roja)
+                // bateria_saliente se mostrará como SALE (en la etiqueta verde)
                 return `<tr class="hover:bg-gray-50 border-b">
                     <td class="table-cell">
                         <div class="font-bold text-gray-800">${dateStr}</div>
                         <div class="text-xs text-gray-500">${timeStr}</div> <!-- HORA CORRECTA -->
                     </td>
                     <td class="table-cell"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">${b.equipo_id||'-'}</span></td>
-                    <td class="table-cell font-mono text-gray-800 font-bold">${b.horometro||'-'} Hrs <span class="text-xs text-green-600 font-normal">(+${b.horas_trabajadas||0})</span></td>
+                    <td class="table-cell font-mono text-gray-800 font-bold">
+                        ${b.horometro||'-'} Hrs 
+                        <span class="text-xs text-green-600 font-normal">(+${b.horas_trabajadas||0} Hrs uso)</span>
+                    </td>
                     <td class="table-cell">
                         <div class="flex flex-col gap-1">
-                            ${b.bateria_serie ? `<span class="text-xs text-green-700 font-bold bg-green-50 px-2 rounded w-fit">Entra: ${b.bateria_serie}</span>` : ''}
-                            ${b.bateria_saliente ? `<span class="text-xs text-red-700 font-bold bg-red-50 px-2 rounded w-fit">Sale: ${b.bateria_saliente}</span>` : ''}
+                            ${b.bateria_saliente ? `<span class="text-xs text-green-700 font-bold bg-green-50 px-2 rounded w-fit">Sale: ${b.bateria_saliente}</span>` : ''}
+                            ${b.bateria_serie ? `<span class="text-xs text-red-700 font-bold bg-red-50 px-2 rounded w-fit">Entra: ${b.bateria_serie}</span>` : ''}
                         </div>
                     </td>
                     <td class="table-cell text-xs text-gray-500">${b.turno||'-'}</td>
@@ -1440,7 +1526,7 @@
                     main_id: b.equipo_id || 'S/N', 
                     sub_id: b.bateria_serie || '-', 
                     metric: `${b.horometro} Hrs`,
-                    detail: b.bateria_saliente ? `Sale: ${b.bateria_saliente}` : 'Ingreso',
+                    detail: b.bateria_saliente ? `Entra: ${b.bateria_saliente}` : 'Ingreso', // Corrección lógica para filtro
                     water: '-',
                     temp: '-',
                     instance: b.horas_trabajadas ? `+${b.horas_trabajadas}h` : '-',
@@ -1462,7 +1548,7 @@
                     raw: b,
                     is_op: false
                 }))
-            ].sort((a,b) => b.date - a.date); 
+            ].sort((a,b) => b.date - a.date); // Ordenar por fecha descendente (más reciente arriba)
 
             // 2. FILTRAR POR BÚSQUEDA
             const term = state.historySearch.toLowerCase();
@@ -1552,15 +1638,14 @@
         }
 
         window.deleteBitacoraItem = async (id) => {
-            if(!confirm("¿Eliminar registro operativo?")) return;
+            if(!confirm("⚠️ ¿Estás seguro de eliminar este registro operativo?")) return;
             await supabaseClient.from('bitacora_operaciones').delete().eq('id', id);
-            bitacora = bitacora.filter(b => b.id !== id);
-            renderApp();
+            // La actualización de UI la maneja handleBitacoraRealtime ahora
         };
 
         // Nueva función para borrar historial de mantención desde la tabla global
         window.deleteBatteryHistoryItem = async (id) => {
-            if(!confirm("¿Eliminar registro de mantención histórico?")) return;
+            if(!confirm("⚠️ ¿Estás seguro de eliminar este registro de mantención histórico?")) return;
             await supabaseClient.from('reportes_mensuales').delete().eq('id', id);
             batteries = batteries.filter(b => b.id !== id);
             renderApp();
